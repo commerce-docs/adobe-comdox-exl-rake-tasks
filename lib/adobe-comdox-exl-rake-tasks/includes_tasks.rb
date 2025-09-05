@@ -7,17 +7,21 @@
 
 # frozen_string_literal: true
 
-# Module for Adobe Comdox EXL image management tasks
+# Module for Adobe Commerce Docs in ExL include management tasks
 module AdobeComdoxExlRakeTasks
-  module ImageTasks
+  module IncludesTasks
     # Available tasks:
-    # - images:optimize - Optimize images in modified files
-    # - images:unused - Find unused images
+    # - includes:maintain_relationships - Discover and maintain include relationships
+    # - includes:maintain_timestamps - Update timestamps based on include changes
+    # - includes:maintain_all - Run both operations in sequence
+    # - includes:unused - Find unused include files
     
     def self.available_tasks
       %w[
-        images:optimize
-        images:unused
+        includes:maintain_relationships
+        includes:maintain_timestamps
+        includes:maintain_all
+        includes:unused
       ]
     end
   end

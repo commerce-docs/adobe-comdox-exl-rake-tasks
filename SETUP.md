@@ -1,6 +1,6 @@
 # Setup Guide for Adobe Docs Rake Tasks
 
-This guide explains how to set up and use the `adobe-docs-rake-tasks` gem in your documentation repositories.
+This guide explains how to set up and use the `adobe-comdox-exl-rake-tasks` gem in your documentation repositories.
 
 ## Quick Start
 
@@ -15,7 +15,7 @@ gem 'rake'
 # ... other gems
 
 # Add the shared rake tasks gem
-gem 'adobe-docs-rake-tasks', git: 'https://github.com/your-org/adobe-docs-rake-tasks.git'
+gem 'adobe-comdox-exl-rake-tasks', git: 'https://github.com/your-org/adobe-comdox-exl-rake-tasks.git'
 ```
 
 ### 2. Install Dependencies
@@ -114,7 +114,7 @@ You can override or extend tasks in your repository's `Rakefile`:
 
 ```ruby
 # Load the shared tasks
-require 'adobe-docs-rake-tasks'
+require 'adobe-comdox-exl-rake-tasks'
 
 # Add custom tasks or override existing ones
 namespace :custom do

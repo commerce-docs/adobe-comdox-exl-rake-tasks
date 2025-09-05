@@ -4,9 +4,9 @@ This directory contains rake task definitions organized by functionality. Rake a
 
 ## File Organization
 
-### `adobe-docs-tasks.rake`
+### `main.rake`
 
-Contains common requires, shared functionality, and non-namespaced tasks for Adobe Commerce on Experience League documentation repository rake tasks:
+Contains common requires, shared functionality, and non-namespaced tasks for Adobe Commerce Docs in ExL documentation repository rake tasks:
 
 - `whatsnew` - Generate data for news digest (default: since last update)
 - `render` - Render templated files and maintain includes

@@ -2,7 +2,7 @@
 
 source 'https://rubygems.org'
 
-# Specify your gem's dependencies in adobe-docs-rake-tasks.gemspec
+# Specify your gem's dependencies in adobe-comdox-exl-rake-tasks.gemspec
 gemspec
 
 # Additional dependencies for development and testing

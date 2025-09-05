@@ -7,16 +7,16 @@
 
 # frozen_string_literal: true
 
-# Adobe Comdox EXL Rake Tasks Gem
+# Adobe Commerce Docs in ExL Rake Tasks Gem
 # This gem provides shared Rake tasks for Adobe Experience League documentation repositories
 
 require 'rake'
 
 # Load all module files
-require_relative 'adobe-docs-rake-tasks/version'
-require_relative 'adobe-docs-rake-tasks/includes_tasks'
-require_relative 'adobe-docs-rake-tasks/image_tasks'
-require_relative 'adobe-docs-rake-tasks/utility_tasks'
+require_relative 'adobe-comdox-exl-rake-tasks/version'
+require_relative 'adobe-comdox-exl-rake-tasks/includes_tasks'
+require_relative 'adobe-comdox-exl-rake-tasks/image_tasks'
+require_relative 'adobe-comdox-exl-rake-tasks/utility_tasks'
 
 # Load all shared Rake tasks from rakelib directory
 Dir[File.join(__dir__, '..', 'rakelib', '*.rake')].each do |rake_file|

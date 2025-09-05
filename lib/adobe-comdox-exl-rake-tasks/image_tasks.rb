@@ -7,17 +7,17 @@
 
 # frozen_string_literal: true
 
-# Module for Adobe Comdox EXL utility tasks
+# Module for Adobe Commerce Docs in ExL image management tasks
 module AdobeComdoxExlRakeTasks
-  module UtilityTasks
+  module ImageTasks
     # Available tasks:
-    # - whatsnew - Generate data for news digest
-    # - render - Render templated files and maintain includes
+    # - images:optimize - Optimize images in modified files
+    # - images:unused - Find unused images
     
     def self.available_tasks
       %w[
-        whatsnew
-        render
+        images:optimize
+        images:unused
       ]
     end
   end

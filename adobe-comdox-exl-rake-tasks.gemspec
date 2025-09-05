@@ -8,7 +8,7 @@ Gem::Specification.new do |spec|
 
   spec.summary       = "Shared Rake tasks for Adobe documentation repositories"
   spec.description   = "A collection of reusable Rake tasks for maintaining Adobe documentation repositories, including include relationship management, timestamp updates, and image optimization."
-  spec.homepage      = "https://github.com/adobe/adobe-docs-rake-tasks"
+  spec.homepage      = "https://github.com/commerce-docs/adobe-comdox-exl-rake-tasks"
   spec.license       = "MIT"
   spec.required_ruby_version = ">= 2.7.0"
 

@@ -8,10 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.1.0] - 2025-01-XX
 
 ### Added
-- **Initial Release** - First version of Adobe Comdox EXL Rake Tasks gem
+
+- **Initial Release** - First version of Adobe Commerce Docs in ExL Rake Tasks gem
 - **Modular Rake Task Architecture**
   - Organized tasks into rakelib/ directory structure
-  - `adobe-docs-tasks.rake` - Core tasks and common functionality
+  - `main.rake` - Core tasks and common functionality
   - `includes.rake` - Comprehensive include management tasks
   - `images.rake` - Image optimization and management tasks
 - **Include Management Tasks**
@@ -39,6 +40,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `image_optim` - Image optimization
 
 ### Technical Details
+
 - Modular file organization for better maintainability
 - Automatic task discovery and loading from rakelib/ directory
 - Comprehensive dependency management

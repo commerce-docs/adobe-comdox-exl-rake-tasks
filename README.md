@@ -1,4 +1,4 @@
-# Adobe Comdox EXL Rake Tasks
+# Adobe Commerce Docs in ExL Rake Tasks
 
 A collection of reusable Rake tasks for maintaining Adobe Experience League documentation repositories. This gem provides standardized tools for managing include relationships, timestamps, images, and other common documentation maintenance tasks.
 
@@ -16,7 +16,7 @@ A collection of reusable Rake tasks for maintaining Adobe Experience League docu
 Add this line to your repository's `Gemfile`:
 
 ```ruby
-gem 'adobe-comdox-exl-rake-tasks', git: 'https://github.com/your-org/adobe-comdox-exl-rake-tasks.git'
+gem 'adobe-comdox-exl-rake-tasks', git: 'https://github.com/commerce-docs/adobe-comdox-exl-rake-tasks.git'
 ```
 
 Then execute:
@@ -77,8 +77,6 @@ rake unused_images
 # Find unused include files
 rake unused_includes
 ```
-
-
 
 ### Utility Tasks
 

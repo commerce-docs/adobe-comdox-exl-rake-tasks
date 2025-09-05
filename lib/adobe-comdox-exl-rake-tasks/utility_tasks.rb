@@ -7,21 +7,17 @@
 
 # frozen_string_literal: true
 
-# Module for Adobe Comdox EXL include management tasks
+# Module for Adobe Commerce Docs in ExL utility tasks
 module AdobeComdoxExlRakeTasks
-  module IncludesTasks
+  module UtilityTasks
     # Available tasks:
-    # - includes:maintain_relationships - Discover and maintain include relationships
-    # - includes:maintain_timestamps - Update timestamps based on include changes
-    # - includes:maintain_all - Run both operations in sequence
-    # - includes:unused - Find unused include files
+    # - whatsnew - Generate data for news digest
+    # - render - Render templated files and maintain includes
     
     def self.available_tasks
       %w[
-        includes:maintain_relationships
-        includes:maintain_timestamps
-        includes:maintain_all
-        includes:unused
+        whatsnew
+        render
       ]
     end
   end
