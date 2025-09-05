@@ -1,0 +1,39 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# Dependencies
+/vendor/bundle/
+/.bundle/
+/vendor/cache/
+
+# Build artifacts
+*.gem
+/pkg/
+/tmp/
+
+# Documentation
+/doc/
+/yardoc/
+
+# Environment
+.env
+.env.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Test coverage
+/coverage/
+
+# Temporary files
+*.tmp
+*.temp

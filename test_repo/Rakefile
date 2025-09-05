@@ -1,0 +1,6 @@
+# frozen_string_literal: true
+
+require 'adobe-docs-rake-tasks'
+
+# The gem automatically loads all tasks
+puts "Adobe Docs Rake Tasks loaded successfully!"

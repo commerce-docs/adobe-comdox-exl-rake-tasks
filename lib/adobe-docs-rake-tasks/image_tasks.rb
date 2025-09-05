@@ -1,0 +1,24 @@
+#
+# Copyright 2025 Adobe All Rights Reserved.
+# NOTICE:  All information contained herein is, and remains the property of Adobe and its suppliers, if any.
+# The intellectual and technical concepts contained herein are proprietary to Adobe and its suppliers and are protected by all applicable intellectual property laws, including trade secret and copyright laws.
+# Dissemination of this information or reproduction of this material is strictly forbidden unless prior written permission is obtained from Adobe.
+#
+
+# frozen_string_literal: true
+
+# Module for Adobe Comdox EXL image management tasks
+module AdobeComdoxExlRakeTasks
+  module ImageTasks
+    # Available tasks:
+    # - images:optimize - Optimize images in modified files
+    # - images:unused - Find unused images
+    
+    def self.available_tasks
+      %w[
+        images:optimize
+        images:unused
+      ]
+    end
+  end
+end
