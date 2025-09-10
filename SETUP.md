@@ -36,7 +36,7 @@ You should see all available tasks listed with descriptions.
 
 The gem expects this standard Adobe docs structure:
 
-```
+```tree
 your-repo/
 ├── help/
 │   ├── _includes/          # Include files
@@ -54,27 +54,25 @@ your-repo/
 
 ### Include Management
 
-- `rake includes:maintain_relationships` - Discover and maintain include file relationships
-- `rake includes:maintain_timestamps` - Update timestamps in main files  
-- `rake includes:maintain_all` - Run both include tasks in sequence
+- `bundle exec rake includes:maintain_relationships` - Discover and maintain include file relationships
+- `bundle exec rake includes:maintain_timestamps` - Update timestamps in main files  
+- `bundle exec rake includes:maintain_all` - Run both include tasks in sequence
 
 ### What's New Generation
 
-- `rake whatsnew` - Generate What's New digest from GitHub activity
-- `rake whatsnew_bp` - Generate Best Practices What's New digest
+- `bundle exec rake whatsnew` - Generate What's New digest from GitHub activity
+- `bundle exec rake whatsnew_bp` - Generate Best Practices What's New digest
 
 ### Image Management
 
-- `rake image_optim` - Optimize images in modified files
-- `rake unused_images` - Find unused images
-- `rake unused_includes` - Find unused include files
-
-
+- `bundle exec rake image_optim` - Optimize images in modified files
+- `bundle exec rake unused_images` - Find unused images
+- `bundle exec rake unused_includes` - Find unused include files
 
 ### Utility Tasks
 
-- `rake render` - Render templated files
-- `rake list_tasks` - Show available tasks with descriptions
+- `bundle exec rake render` - Render templated files
+- `bundle exec rake list_tasks` - Show available tasks with descriptions
 
 ## Usage Examples
 
@@ -86,6 +84,7 @@ bundle exec rake includes:maintain_all
 ```
 
 This will:
+
 1. Discover all include relationships
 2. Update timestamps in main files
 
@@ -193,7 +192,7 @@ jobs:
 
 ## Getting Help
 
-- Use `rake list_tasks` to see all available tasks
+- Use `bundle exec rake list_tasks` to see all available tasks
 - Check the main [README.md](README.md) for detailed documentation
 - Open an issue on the gem repository for bugs or feature requests
 - Contact the Adobe Documentation Team for support

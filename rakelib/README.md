@@ -61,7 +61,7 @@ end
 Tasks are available immediately after creation:
 
 ```bash
-rake your_namespace:task_name
+bundle exec rake your_namespace:task_name
 ```
 
 ## Benefits

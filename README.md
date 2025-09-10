@@ -30,7 +30,7 @@ bundle install
 Once installed, all tasks are automatically available in your repository. You can list all available tasks with:
 
 ```bash
-rake list_tasks
+bundle exec rake list_tasks
 ```
 
 ### Include Management
@@ -39,13 +39,13 @@ Maintain include file relationships and timestamps:
 
 ```bash
 # Discover and maintain include relationships
-rake includes:maintain_relationships
+bundle exec rake includes:maintain_relationships
 
 # Update timestamps in main files
-rake includes:maintain_timestamps
+bundle exec rake includes:maintain_timestamps
 
 # Run both tasks in sequence
-rake includes:maintain_all
+bundle exec rake includes:maintain_all
 ```
 
 ### What's New Generation
@@ -54,13 +54,13 @@ Generate news digests from GitHub activity:
 
 ```bash
 # Generate What's New digest since last update
-rake whatsnew
+bundle exec rake whatsnew
 
 # Generate Best Practices What's New digest
-rake whatsnew_bp
+bundle exec rake whatsnew_bp
 
 # Generate for specific time period
-rake whatsnew since="jul 4"
+bundle exec rake whatsnew since="jul 4"
 ```
 
 ### Image Management
@@ -69,23 +69,23 @@ Optimize and audit images:
 
 ```bash
 # Optimize images in modified files
-rake image_optim
+bundle exec rake image_optim
 
 # Find unused images
-rake unused_images
+bundle exec rake unused_images
 
 # Find unused include files
-rake unused_includes
+bundle exec rake unused_includes
 ```
 
 ### Utility Tasks
 
 ```bash
 # Render templated files
-rake render
+bundle exec rake render
 
 # Show task help
-rake list_tasks
+bundle exec rake list_tasks
 ```
 
 ## Configuration

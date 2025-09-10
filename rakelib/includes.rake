@@ -127,7 +127,7 @@ namespace :includes do
     relationships_file = 'include-relationships.yml'
     
     unless File.exist?(relationships_file)
-      puts "Error: #{relationships_file} not found. Run 'rake includes:maintain_relationships' first.".red
+      puts "Error: #{relationships_file} not found. Run 'bundle exec rake includes:maintain_relationships' first.".red
       exit 1
     end
     

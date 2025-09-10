@@ -14,7 +14,7 @@
 require 'colorator'
 
 namespace :images do
-  desc 'Optimize images in modified uncommitted files. For other images, use "path" such as "rake images:optimize path=../path/to/dir/or/file".'
+  desc 'Optimize images in modified uncommitted files. For other images, use "path" such as "bundle exec rake images:optimize path=../path/to/dir/or/file".'
   task :optimize do
     puts
     puts 'Checking images ...'.magenta
