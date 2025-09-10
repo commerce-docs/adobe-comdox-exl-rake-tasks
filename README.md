@@ -30,7 +30,7 @@ bundle install
 Once installed, all tasks are automatically available in your repository. You can list all available tasks with:
 
 ```bash
-bundle exec rake list_tasks
+bundle exec rake -T
 ```
 
 ### Include Management
@@ -85,7 +85,7 @@ bundle exec rake unused_includes
 bundle exec rake render
 
 # Show task help
-bundle exec rake list_tasks
+bundle exec rake -T
 ```
 
 ## Configuration
