@@ -27,7 +27,7 @@ bundle install
 ### 3. Verify Installation
 
 ```bash
-bundle exec rake list_tasks
+bundle exec rake -T
 ```
 
 You should see all available tasks listed with descriptions.
@@ -72,7 +72,7 @@ your-repo/
 ### Utility Tasks
 
 - `bundle exec rake render` - Render templated files
-- `bundle exec rake list_tasks` - Show available tasks with descriptions
+- `bundle exec rake -T` - Show available tasks with descriptions
 
 ## Usage Examples
 
@@ -192,7 +192,7 @@ jobs:
 
 ## Getting Help
 
-- Use `bundle exec rake list_tasks` to see all available tasks
+- Use `bundle exec rake -T` to see all available tasks
 - Check the main [README.md](README.md) for detailed documentation
 - Open an issue on the gem repository for bugs or feature requests
 - Contact the Adobe Documentation Team for support

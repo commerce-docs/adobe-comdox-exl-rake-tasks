@@ -28,7 +28,7 @@ bundle install
 ### 3. Verify Installation
 
 ```bash
-bundle exec rake list_tasks
+bundle exec rake -T
 ```
 
 You should see all the available tasks listed with descriptions.
@@ -184,7 +184,7 @@ maintain-docs:
 
 ## Getting Help
 
-- Use `bundle exec rake list_tasks` to see all available tasks
+- Use `bundle exec rake -T` to see all available tasks
 - Check the main [README.md](README.md) for detailed documentation
 - Open an issue on the gem repository for bugs or feature requests
 - Contact the Adobe Documentation Team for support
