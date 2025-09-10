@@ -30,7 +30,7 @@ require 'tzinfo'
 # What's New Task
 desc 'Generate data for a news digest.
       Default timeframe is since last update.
-      For other period, use "since" argument, such as, rake whatsnew since="jul 4"'
+      For other period, use "since" argument, such as, bundle exec rake whatsnew since="jul 4"'
 task :whatsnew do
   since = ENV['since']
   current_file = '_data/whats-new.yml'

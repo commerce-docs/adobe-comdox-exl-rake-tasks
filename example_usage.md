@@ -184,7 +184,7 @@ maintain-docs:
 
 ## Getting Help
 
-- Use `rake list_tasks` to see all available tasks
+- Use `bundle exec rake list_tasks` to see all available tasks
 - Check the main [README.md](README.md) for detailed documentation
 - Open an issue on the gem repository for bugs or feature requests
 - Contact the Adobe Documentation Team for support
