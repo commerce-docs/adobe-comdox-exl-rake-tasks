@@ -17,9 +17,19 @@ require 'date'
 require 'tzinfo'
 
 namespace :includes do
+  # Helper method to write logs to include-relationships.log
+  def log_message(message, log_file = 'include-relationships.log')
+    timestamp = Time.now.strftime('%Y-%m-%d %H:%M:%S')
+    log_entry = "[#{timestamp}] #{message}\n"
+    
+    # Write to log file
+    File.open(log_file, 'a') do |file|
+      file.write(log_entry)
+    end
+  end
   desc 'Maintain include-relationships.yml by discovering include relationships in markdown files.'
   task :maintain_relationships do
-    puts 'Running task to maintain include-relationships.yml'.magenta
+    log_message('Running task to maintain include-relationships.yml'.magenta)
     
     relationships_file = 'include-relationships.yml'
     current_relationships = {}
@@ -27,7 +37,7 @@ namespace :includes do
     # Load existing relationships if file exists
     if File.exist?(relationships_file)
       current_relationships = YAML.load_file(relationships_file)
-      puts "Loaded existing relationships from #{relationships_file}".blue
+      log_message("Loaded existing relationships from #{relationships_file}".blue)
     end
     
     # Initialize new relationships structure
@@ -44,11 +54,11 @@ namespace :includes do
     
     # Get list of existing include files from help/_includes directory
     include_files = Dir['../help/_includes/**/*'].select { |f| File.file?(f) && f.end_with?('.md') }
-    puts "Found #{include_files.size} include files in help/_includes directory".blue
+    log_message("Found #{include_files.size} include files in help/_includes directory".blue)
     
     # Find all markdown files in the help directory (excluding _includes)
     markdown_files = Dir['../help/**/*.md'].reject { |f| f.include?('/_includes/') }
-    puts "Scanning #{markdown_files.size} main markdown files for include references...".blue
+    log_message("Scanning #{markdown_files.size} main markdown files for include references...".blue)
     
     # For each include file, search for main files that reference it
     include_files.each do |include_file|
@@ -85,9 +95,9 @@ namespace :includes do
           end
         end
         
-        puts "Found #{referencing_files.size} main files referencing #{include_relative_path}".green
+        log_message("Found #{referencing_files.size} main files referencing #{include_relative_path}".green)
       else
-        puts "No main files reference #{include_relative_path}".yellow
+        log_message("No main files reference #{include_relative_path}".yellow)
       end
     end
     
@@ -97,52 +107,52 @@ namespace :includes do
     # Write the new relationships file
     File.write(relationships_file, new_relationships.to_yaml)
     
-    puts "Updated #{relationships_file} with #{new_relationships['relationships'].size} relationships".green
+    log_message("Updated #{relationships_file} with #{new_relationships['relationships'].size} relationships".green)
     
     # Show summary of changes
     if current_relationships['relationships']
       old_count = current_relationships['relationships'].size
       new_count = new_relationships['relationships'].size
       
-      puts "\nSummary:".blue
-      puts "  Previous relationships: #{old_count}"
-      puts "  New relationships: #{new_count}"
+      log_message("\nSummary:".blue)
+      log_message("  Previous relationships: #{old_count}")
+      log_message("  New relationships: #{new_count}")
       
       if new_count > old_count
-        puts "  Added: #{new_count - old_count} new relationships".green
+        log_message("  Added: #{new_count - old_count} new relationships".green)
       elsif new_count < old_count
-        puts "  Removed: #{old_count - new_count} relationships".yellow
+        log_message("  Removed: #{old_count - new_count} relationships".yellow)
       else
-        puts "  No change in relationship count".blue
+        log_message("  No change in relationship count".blue)
       end
     end
     
-    puts "\nTask completed successfully!".green
+    log_message("\nTask completed successfully!".green)
   end
 
   desc 'Maintain include timestamps by adding latest include file change timestamps to main files.'
   task :maintain_timestamps do
-    puts 'Running task to maintain include timestamps...'.magenta
+    log_message('Running task to maintain include timestamps...'.magenta)
     
     relationships_file = 'include-relationships.yml'
     
     unless File.exist?(relationships_file)
-      puts "Error: #{relationships_file} not found. Run 'bundle exec rake includes:maintain_relationships' first.".red
+      log_message("Error: #{relationships_file} not found. Run 'bundle exec rake includes:maintain_relationships' first.".red)
       exit 1
     end
     
     relationships = YAML.load_file(relationships_file)
-    puts "Loaded #{relationships['relationships'].size} relationships from #{relationships_file}".blue
+    log_message("Loaded #{relationships['relationships'].size} relationships from #{relationships_file}".blue)
     
     # Process each main file and its includes
     relationships['relationships'].each do |main_file, includes|
-      puts "\nProcessing #{main_file}...".blue
+      log_message("\nProcessing #{main_file}...".blue)
       
       # Get the full path to the main file
       main_file_path = "../help/#{main_file}"
       
       unless File.exist?(main_file_path)
-        puts "  Warning: Main file #{main_file} not found, skipping".yellow
+        log_message("  Warning: Main file #{main_file} not found, skipping".yellow)
         next
       end
       
@@ -159,7 +169,7 @@ namespace :includes do
         begin
           git_output = `git log -1 --format="%aI" -- "#{relative_include_path}" 2>/dev/null`
           if git_output.strip.empty?
-            puts "  Warning: No git history found for #{relative_include_path}".yellow
+            log_message("  Warning: No git history found for #{relative_include_path}".yellow)
             next
           end
           
@@ -170,18 +180,18 @@ namespace :includes do
             latest_timestamp = commit_date
           end
         rescue => e
-          puts "  Error processing #{relative_include_path}: #{e.message}".red
+          log_message("  Error processing #{relative_include_path}: #{e.message}".red)
           next
         end
       end
       
       if latest_timestamp.nil?
-        puts "  Warning: Could not determine timestamp for any include files".yellow
+        log_message("  Warning: Could not determine timestamp for any include files".yellow)
         next
       end
       
-      puts "  Latest include change: #{latest_timestamp.strftime('%Y-%m-%d %H:%M:%S')}".green
-      puts "  Include files checked: #{include_files_checked.join(', ')}".blue
+      log_message("  Latest include change: #{latest_timestamp.strftime('%Y-%m-%d %H:%M:%S')}".green)
+      log_message("  Include files checked: #{include_files_checked.join(', ')}".blue)
       
       # Read the main file content
       content = File.read(main_file_path)
@@ -192,23 +202,23 @@ namespace :includes do
       if content.match?(timestamp_pattern)
         # Update existing timestamp
         new_content = content.sub(timestamp_pattern, "<!-- Last updated from includes: #{latest_timestamp.strftime('%Y-%m-%d %H:%M:%S')} -->\n")
-        puts "  Updated existing timestamp".green
+        log_message("  Updated existing timestamp".green)
       else
         # Add new timestamp at the end
         new_content = content + "\n<!-- Last updated from includes: #{latest_timestamp.strftime('%Y-%m-%d %H:%M:%S')} -->\n"
-        puts "  Added new timestamp".green
+        log_message("  Added new timestamp".green)
       end
       
       # Write the updated content back to the file
       File.write(main_file_path, new_content)
     end
     
-    puts "\nInclude timestamp maintenance completed successfully!".green
+    log_message("\nInclude timestamp maintenance completed successfully!".green)
   end
 
   desc 'Maintain both include relationships and timestamps in sequence.'
   task :maintain_all => [:maintain_relationships, :maintain_timestamps] do
-    puts "\nInclude maintenance completed successfully!".green
+    log_message("\nInclude maintenance completed successfully!".green)
   end
 
   desc 'Find unused includes.'
