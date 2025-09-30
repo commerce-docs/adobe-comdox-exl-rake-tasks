@@ -5,6 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] - 2025-01-27
+
+### Added
+
+- **Enhanced Logging System** - Comprehensive logging functionality for include management tasks
+  - Added `log_message` helper method for timestamped logging
+  - All include management tasks now write detailed logs to `include-relationships.log`
+  - Improved debugging and task execution tracking
+  - Timestamped log entries with consistent format
+
+### Changed
+
+- **Include Management Tasks** - Enhanced with comprehensive logging
+  - `includes:maintain_relationships` now logs all discovery and processing steps
+  - `includes:maintain_timestamps` provides detailed logging of timestamp updates
+  - `includes:maintain_all` includes logging for combined operations
+  - All console output now also written to log file for better traceability
+
+### Technical Details
+
+- Log file format: `[YYYY-MM-DD HH:MM:SS] message`
+- Log file location: `include-relationships.log` (in project root)
+- Maintains backward compatibility with existing console output
+- Enhanced error tracking and debugging capabilities
+
 ## [0.1.0] - 2025-09-10
 
 ### Added
