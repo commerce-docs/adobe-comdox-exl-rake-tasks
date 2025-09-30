@@ -6,7 +6,6 @@ A collection of reusable Rake tasks for maintaining Adobe Experience League docu
 
 - **Include Management**: Automatically discover and maintain include file relationships
 - **Timestamp Updates**: Keep main files updated with latest include file changes
-- **Comprehensive Logging**: Detailed logging system for debugging and task tracking
 - **What's New Generation**: Generate news digests from GitHub activity
 - **Image Optimization**: Find and optimize unused images
 - **Include Auditing**: Identify orphaned include files
@@ -48,8 +47,6 @@ bundle exec rake includes:maintain_timestamps
 # Run both tasks in sequence
 bundle exec rake includes:maintain_all
 ```
-
-All include management tasks now provide comprehensive logging. Check the `include-relationships.log` file for detailed execution logs with timestamps.
 
 ### What's New Generation
 
@@ -101,7 +98,6 @@ repository/
 │   ├── _includes/          # Include files
 │   └── *.md               # Main documentation files
 ├── include-relationships.yml  # Generated relationships file
-├── include-relationships.log  # Task execution logs
 └── Rakefile               # Your main Rakefile
 ```
 
