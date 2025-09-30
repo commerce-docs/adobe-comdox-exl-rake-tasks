@@ -19,7 +19,8 @@ require 'tzinfo'
 namespace :includes do
   desc 'Maintain include-relationships.yml by discovering include relationships in markdown files.'
   task :maintain_relationships do
-    puts 'Running task to maintain include-relationships.yml'.magenta
+    puts 'Running task: includes:maintain_relationships'.magenta
+    puts 'Status: Starting include relationship discovery...'.yellow
     
     relationships_file = 'include-relationships.yml'
     current_relationships = {}
@@ -27,7 +28,6 @@ namespace :includes do
     # Load existing relationships if file exists
     if File.exist?(relationships_file)
       current_relationships = YAML.load_file(relationships_file)
-      puts "Loaded existing relationships from #{relationships_file}".blue
     end
     
     # Initialize new relationships structure
@@ -44,11 +44,9 @@ namespace :includes do
     
     # Get list of existing include files from help/_includes directory
     include_files = Dir['../help/_includes/**/*'].select { |f| File.file?(f) && f.end_with?('.md') }
-    puts "Found #{include_files.size} include files in help/_includes directory".blue
     
     # Find all markdown files in the help directory (excluding _includes)
     markdown_files = Dir['../help/**/*.md'].reject { |f| f.include?('/_includes/') }
-    puts "Scanning #{markdown_files.size} main markdown files for include references...".blue
     
     # For each include file, search for main files that reference it
     include_files.each do |include_file|
@@ -84,10 +82,6 @@ namespace :includes do
             new_relationships['relationships'][main_file] = [include_absolute_path]
           end
         end
-        
-        puts "Found #{referencing_files.size} main files referencing #{include_relative_path}".green
-      else
-        puts "No main files reference #{include_relative_path}".yellow
       end
     end
     
@@ -97,52 +91,35 @@ namespace :includes do
     # Write the new relationships file
     File.write(relationships_file, new_relationships.to_yaml)
     
-    puts "Updated #{relationships_file} with #{new_relationships['relationships'].size} relationships".green
+    puts "Status: Writing relationships to #{relationships_file}...".yellow
+    puts "Result: Successfully discovered #{new_relationships['relationships'].size} include relationships".green
+    puts 'Task completed: includes:maintain_relationships'.magenta
     
-    # Show summary of changes
-    if current_relationships['relationships']
-      old_count = current_relationships['relationships'].size
-      new_count = new_relationships['relationships'].size
-      
-      puts "\nSummary:".blue
-      puts "  Previous relationships: #{old_count}"
-      puts "  New relationships: #{new_count}"
-      
-      if new_count > old_count
-        puts "  Added: #{new_count - old_count} new relationships".green
-      elsif new_count < old_count
-        puts "  Removed: #{old_count - new_count} relationships".yellow
-      else
-        puts "  No change in relationship count".blue
-      end
-    end
-    
-    puts "\nTask completed successfully!".green
   end
 
   desc 'Maintain include timestamps by adding latest include file change timestamps to main files.'
   task :maintain_timestamps do
-    puts 'Running task to maintain include timestamps...'.magenta
+    puts 'Running task: includes:maintain_timestamps'.magenta
+    puts 'Status: Starting timestamp maintenance...'.yellow
     
     relationships_file = 'include-relationships.yml'
     
     unless File.exist?(relationships_file)
-      puts "Error: #{relationships_file} not found. Run 'bundle exec rake includes:maintain_relationships' first.".red
+      puts "Error: #{relationships_file} not found. Run 'bundle exec rake includes:maintain_relationships' first."
       exit 1
     end
     
     relationships = YAML.load_file(relationships_file)
-    puts "Loaded #{relationships['relationships'].size} relationships from #{relationships_file}".blue
+    puts "Status: Loaded #{relationships['relationships'].size} relationships from #{relationships_file}".yellow
     
     # Process each main file and its includes
+    files_processed = 0
     relationships['relationships'].each do |main_file, includes|
-      puts "\nProcessing #{main_file}...".blue
       
       # Get the full path to the main file
       main_file_path = "../help/#{main_file}"
       
       unless File.exist?(main_file_path)
-        puts "  Warning: Main file #{main_file} not found, skipping".yellow
         next
       end
       
@@ -159,7 +136,6 @@ namespace :includes do
         begin
           git_output = `git log -1 --format="%aI" -- "#{relative_include_path}" 2>/dev/null`
           if git_output.strip.empty?
-            puts "  Warning: No git history found for #{relative_include_path}".yellow
             next
           end
           
@@ -170,18 +146,13 @@ namespace :includes do
             latest_timestamp = commit_date
           end
         rescue => e
-          puts "  Error processing #{relative_include_path}: #{e.message}".red
           next
         end
       end
       
       if latest_timestamp.nil?
-        puts "  Warning: Could not determine timestamp for any include files".yellow
         next
       end
-      
-      puts "  Latest include change: #{latest_timestamp.strftime('%Y-%m-%d %H:%M:%S')}".green
-      puts "  Include files checked: #{include_files_checked.join(', ')}".blue
       
       # Read the main file content
       content = File.read(main_file_path)
@@ -192,31 +163,35 @@ namespace :includes do
       if content.match?(timestamp_pattern)
         # Update existing timestamp
         new_content = content.sub(timestamp_pattern, "<!-- Last updated from includes: #{latest_timestamp.strftime('%Y-%m-%d %H:%M:%S')} -->\n")
-        puts "  Updated existing timestamp".green
       else
         # Add new timestamp at the end
         new_content = content + "\n<!-- Last updated from includes: #{latest_timestamp.strftime('%Y-%m-%d %H:%M:%S')} -->\n"
-        puts "  Added new timestamp".green
       end
       
       # Write the updated content back to the file
       File.write(main_file_path, new_content)
+      files_processed += 1
     end
     
-    puts "\nInclude timestamp maintenance completed successfully!".green
+    puts "Result: Successfully updated timestamps in #{files_processed} files".green
+    puts 'Task completed: includes:maintain_timestamps'.magenta
   end
 
   desc 'Maintain both include relationships and timestamps in sequence.'
   task :maintain_all => [:maintain_relationships, :maintain_timestamps] do
-    puts "\nInclude maintenance completed successfully!".green
+    puts 'Running task: includes:maintain_all'.magenta
+    puts 'Status: Completed both relationship discovery and timestamp maintenance'.yellow
+    puts 'Result: All include management tasks completed successfully'.green
+    puts 'Task completed: includes:maintain_all'.magenta
   end
 
   desc 'Find unused includes.'
   task :unused do
-    puts 'Running a task to find unused _includes'.magenta
+    puts 'Running task: includes:unused'.magenta
+    puts 'Status: Scanning for unused include files...'.yellow
+    
     includes = FileList['../help/_includes/**/*']
-
-    puts "The project contains a total of #{includes.size} includes"
+    puts "Status: Found #{includes.size} include files to check".yellow
 
     # snippets.md is expected and should not be removed based on the way the snippets functionality was designed for ExL.
     # See https://experienceleague.corp.adobe.com/docs/authoring-guide-exl/using/authoring/includes-snippets.html?lang=en#creating-snippets.
@@ -230,13 +205,14 @@ namespace :includes do
     end
 
     if includes.empty?
-      puts 'No unlinked includes'.green
+      puts 'Result: No unused includes found'.green
     else
-      puts 'The following includes are not linked:'
+      puts 'Result: Found unused includes:'.red
       includes.each do |include|
-        puts "No links for #{include}".yellow
+        puts "  - #{include}".yellow
       end
-      puts "Found #{includes.size} unlinked includes".red
+      puts "Status: #{includes.size} unlinked includes detected".red
     end
+    puts 'Task completed: includes:unused'.magenta
   end
 end
