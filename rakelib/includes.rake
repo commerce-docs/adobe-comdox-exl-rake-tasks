@@ -19,6 +19,9 @@ require 'tzinfo'
 namespace :includes do
   desc 'Maintain include-relationships.yml by discovering include relationships in markdown files.'
   task :maintain_relationships do
+    puts 'Running task: includes:maintain_relationships'.magenta
+    puts 'Status: Starting include relationship discovery...'.yellow
+    
     relationships_file = 'include-relationships.yml'
     current_relationships = {}
     
@@ -88,10 +91,17 @@ namespace :includes do
     # Write the new relationships file
     File.write(relationships_file, new_relationships.to_yaml)
     
+    puts "Status: Writing relationships to #{relationships_file}...".yellow
+    puts "Result: Successfully discovered #{new_relationships['relationships'].size} include relationships".green
+    puts 'Task completed: includes:maintain_relationships'.magenta
+    
   end
 
   desc 'Maintain include timestamps by adding latest include file change timestamps to main files.'
   task :maintain_timestamps do
+    puts 'Running task: includes:maintain_timestamps'.magenta
+    puts 'Status: Starting timestamp maintenance...'.yellow
+    
     relationships_file = 'include-relationships.yml'
     
     unless File.exist?(relationships_file)
@@ -100,8 +110,10 @@ namespace :includes do
     end
     
     relationships = YAML.load_file(relationships_file)
+    puts "Status: Loaded #{relationships['relationships'].size} relationships from #{relationships_file}".yellow
     
     # Process each main file and its includes
+    files_processed = 0
     relationships['relationships'].each do |main_file, includes|
       
       # Get the full path to the main file
@@ -158,19 +170,28 @@ namespace :includes do
       
       # Write the updated content back to the file
       File.write(main_file_path, new_content)
+      files_processed += 1
     end
+    
+    puts "Result: Successfully updated timestamps in #{files_processed} files".green
+    puts 'Task completed: includes:maintain_timestamps'.magenta
   end
 
   desc 'Maintain both include relationships and timestamps in sequence.'
   task :maintain_all => [:maintain_relationships, :maintain_timestamps] do
+    puts 'Running task: includes:maintain_all'.magenta
+    puts 'Status: Completed both relationship discovery and timestamp maintenance'.yellow
+    puts 'Result: All include management tasks completed successfully'.green
+    puts 'Task completed: includes:maintain_all'.magenta
   end
 
   desc 'Find unused includes.'
   task :unused do
-    puts 'Running a task to find unused _includes'.magenta
+    puts 'Running task: includes:unused'.magenta
+    puts 'Status: Scanning for unused include files...'.yellow
+    
     includes = FileList['../help/_includes/**/*']
-
-    puts "The project contains a total of #{includes.size} includes"
+    puts "Status: Found #{includes.size} include files to check".yellow
 
     # snippets.md is expected and should not be removed based on the way the snippets functionality was designed for ExL.
     # See https://experienceleague.corp.adobe.com/docs/authoring-guide-exl/using/authoring/includes-snippets.html?lang=en#creating-snippets.
@@ -184,13 +205,14 @@ namespace :includes do
     end
 
     if includes.empty?
-      puts 'No unlinked includes'.green
+      puts 'Result: No unused includes found'.green
     else
-      puts 'The following includes are not linked:'
+      puts 'Result: Found unused includes:'.red
       includes.each do |include|
-        puts "No links for #{include}".yellow
+        puts "  - #{include}".yellow
       end
-      puts "Found #{includes.size} unlinked includes".red
+      puts "Status: #{includes.size} unlinked includes detected".red
     end
+    puts 'Task completed: includes:unused'.magenta
   end
 end
