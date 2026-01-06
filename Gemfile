@@ -9,8 +9,8 @@ gemspec
 gem 'tzinfo', '~> 2.0'
 
 group :development do
+  gem 'minitest', '~> 5.25'
   gem 'rake', '~> 13.0'
-  gem 'rspec', '~> 3.12'
-  gem 'rubocop', '~> 1.50'
+  gem 'rubocop', '~> 1.70'
   gem 'yard', '~> 0.9'
 end

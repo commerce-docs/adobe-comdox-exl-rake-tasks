@@ -1,24 +1,23 @@
 PATH
   remote: .
   specs:
-    adobe-comdox-exl-rake-tasks (0.1.0)
+    adobe-comdox-exl-rake-tasks (0.3.0)
       colorator (~> 1.1)
-      date (~> 3.2)
-      image_optim (~> 0.30)
-      json (~> 2.6)
-      rake (>= 13.0)
+      date (~> 3.3)
+      image_optim (~> 0.31)
+      image_optim_pack (~> 0.12)
+      rake (~> 13.0)
       tzinfo (~> 2.0)
-      yaml (~> 0.2)
+      yaml (~> 0.3)
 
 GEM
   remote: https://rubygems.org/
   specs:
     ast (2.4.3)
     colorator (1.1.0)
-    concurrent-ruby (1.3.5)
-    date (3.4.1)
-    diff-lcs (1.6.2)
-    exifr (1.4.1)
+    concurrent-ruby (1.3.6)
+    date (3.5.1)
+    exifr (1.5.1)
     fspath (3.1.2)
     image_optim (0.31.4)
       exifr (~> 1.2, >= 1.2.2)
@@ -26,35 +25,32 @@ GEM
       image_size (>= 1.5, < 4)
       in_threads (~> 1.3)
       progress (~> 3.0, >= 3.0.1)
+    image_optim_pack (0.12.2.20251229-arm64-darwin)
+      fspath (>= 2.1, < 4)
+      image_optim (~> 0.19)
+    image_optim_pack (0.12.2.20251229-x86_64-darwin)
+      fspath (>= 2.1, < 4)
+      image_optim (~> 0.19)
+    image_optim_pack (0.12.2.20251229-x86_64-linux)
+      fspath (>= 2.1, < 4)
+      image_optim (~> 0.19)
     image_size (3.4.0)
     in_threads (1.6.0)
-    json (2.13.2)
+    json (2.18.0)
     language_server-protocol (3.17.0.5)
     lint_roller (1.1.0)
+    minitest (5.27.0)
     parallel (1.27.0)
-    parser (3.3.9.0)
+    parser (3.3.10.0)
       ast (~> 2.4.1)
       racc
-    prism (1.4.0)
+    prism (1.7.0)
     progress (3.6.0)
     racc (1.8.1)
     rainbow (3.1.1)
-    rake (13.3.0)
-    regexp_parser (2.11.2)
-    rspec (3.13.1)
-      rspec-core (~> 3.13.0)
-      rspec-expectations (~> 3.13.0)
-      rspec-mocks (~> 3.13.0)
-    rspec-core (3.13.5)
-      rspec-support (~> 3.13.0)
-    rspec-expectations (3.13.5)
-      diff-lcs (>= 1.2.0, < 2.0)
-      rspec-support (~> 3.13.0)
-    rspec-mocks (3.13.5)
-      diff-lcs (>= 1.2.0, < 2.0)
-      rspec-support (~> 3.13.0)
-    rspec-support (3.13.5)
-    rubocop (1.80.1)
+    rake (13.3.1)
+    regexp_parser (2.11.3)
+    rubocop (1.82.1)
       json (~> 2.3)
       language_server-protocol (~> 3.17.0.2)
       lint_roller (~> 1.1.0)
@@ -62,34 +58,34 @@ GEM
       parser (>= 3.3.0.2)
       rainbow (>= 2.2.2, < 4.0)
       regexp_parser (>= 2.9.3, < 3.0)
-      rubocop-ast (>= 1.46.0, < 2.0)
+      rubocop-ast (>= 1.48.0, < 2.0)
       ruby-progressbar (~> 1.7)
       unicode-display_width (>= 2.4.0, < 4.0)
-    rubocop-ast (1.46.0)
+    rubocop-ast (1.49.0)
       parser (>= 3.3.7.2)
-      prism (~> 1.4)
+      prism (~> 1.7)
     ruby-progressbar (1.13.0)
     tzinfo (2.0.6)
       concurrent-ruby (~> 1.0)
-    unicode-display_width (3.1.5)
-      unicode-emoji (~> 4.0, >= 4.0.4)
-    unicode-emoji (4.0.4)
+    unicode-display_width (3.2.0)
+      unicode-emoji (~> 4.1)
+    unicode-emoji (4.2.0)
     yaml (0.4.0)
-    yard (0.9.37)
+    yard (0.9.38)
 
 PLATFORMS
-  arm64-darwin-22
-  arm64-darwin-24
-  ruby
+  arm64-darwin
+  x86_64-darwin
+  x86_64-linux
 
 DEPENDENCIES
   adobe-comdox-exl-rake-tasks!
   bundler (~> 2.0)
+  minitest (~> 5.25)
   rake (~> 13.0)
-  rspec (~> 3.12)
-  rubocop (~> 1.50)
+  rubocop (~> 1.70)
   tzinfo (~> 2.0)
   yard (~> 0.9)
 
 BUNDLED WITH
-   2.1.4
+   2.7.2
