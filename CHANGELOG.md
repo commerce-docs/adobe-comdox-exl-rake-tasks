@@ -19,6 +19,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Test suite** - Added comprehensive unit and integration tests using Minitest
 - **Dependency** - Added `image_optim_pack` (~> 0.12) for image optimization binaries
+- **Dependency** - Added `jekyll` (~> 4.3) for template rendering
+- **Dependency** - Added `whatsup_github` (v1.2.0 from commerce-docs fork) for What's New digest generation
+- **Embedded render task** - The `render` task no longer requires a separate `_scripts/render` file in each project
 
 ### Removed
 
