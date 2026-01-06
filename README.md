@@ -13,10 +13,13 @@ A collection of reusable Rake tasks for maintaining Adobe Experience League docu
 
 ## Installation
 
-Add this line to your repository's `Gemfile`:
+Add these lines to your repository's `Gemfile`:
 
 ```ruby
 gem 'adobe-comdox-exl-rake-tasks', git: 'https://github.com/commerce-docs/adobe-comdox-exl-rake-tasks.git'
+
+# Required for whatsnew task (generates What's New digests from GitHub activity)
+gem 'whatsup_github', git: 'https://github.com/commerce-docs/whatsup_github', tag: 'v1.2.0'
 ```
 
 Then execute:
@@ -24,6 +27,8 @@ Then execute:
 ```bash
 bundle install
 ```
+
+> **Note:** The `whatsup_github` gem is required for the `whatsnew` rake task. If you don't need What's New generation, you can omit it.
 
 ## Usage
 
