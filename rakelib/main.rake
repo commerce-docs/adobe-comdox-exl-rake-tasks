@@ -31,12 +31,11 @@
 require 'yaml'
 require 'colorator'
 require 'date'
-require 'json'
 require 'tzinfo'
 
-# Note: Individual namespace tasks have been moved to separate files:
+# NOTE: Individual namespace tasks have been moved to separate files:
 # - includes.rake: Include management tasks
-# - images.rake: Image management tasks  
+# - images.rake: Image management tasks
 # - whatsnew.rake: What's new tasks
 # - utility.rake: Utility tasks
 #
@@ -47,7 +46,7 @@ desc 'Generate data for a news digest.
       Default timeframe is since last update.
       For other period, use "since" argument, such as, bundle exec rake whatsnew since="jul 4"'
 task :whatsnew do
-  since = ENV['since']
+  since = ENV.fetch('since', nil)
   current_file = '_data/whats-new.yml'
   generated_file = 'tmp/whats-new.yml'
   current_data = YAML.load_file current_file
@@ -80,7 +79,7 @@ end
 
 # Utility Tasks
 desc 'Render the templated files.
-  Renders the templated files in the "_jekyll/templates" directory. The result will be found in the "help/includes/templated" directory.'
+  Renders the templated files in the "_jekyll/templates" directory. The result will be found in the "help/includes/templated" directory.' # rubocop:disable Layout/LineLength
 task :render do
   sh '_scripts/render'
   Rake::Task['includes:maintain_all'].invoke
