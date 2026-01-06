@@ -28,24 +28,42 @@
 
 require 'colorator'
 
+# Helper methods for image tasks
+module ImageTasksHelper
+  def self.uncommitted_image_files
+    modified = `git ls-files --modified --others --exclude-standard -- ..`.split("\n")
+    deleted = `git ls-files --deleted -- ..`.split("\n")
+    (modified - deleted).select { |f| File.extname(f) =~ /\.(png|jpg|jpeg|gif)/i }
+  end
+
+  def self.image_linked?(content, basename)
+    escaped = Regexp.escape(basename)
+    content.match?(/!\[[^\]]*\]\([^)]*#{escaped}[^)]*\)/) ||
+      content.match?(/<img\s+[^>]*src=["'][^"']*#{escaped}["']/)
+  end
+
+  def self.report_unused_images(images)
+    if images.empty?
+      puts 'No unlinked images'.green
+    else
+      images.each { |img| puts "No links for #{img}".yellow }
+      puts "Found #{images.size} dangling images".red
+    end
+  end
+end
+
 namespace :images do
-  desc 'Optimize images in modified uncommitted files. For other images, use "path" such as "bundle exec rake images:optimize path=../path/to/dir/or/file".'
+  desc 'Optimize images in modified uncommitted files. For other images, use "path".'
   task :optimize do
-    puts
-    puts 'Checking images ...'.magenta
-    path = ENV['path']
+    puts "\nChecking images ...".magenta
+    path = ENV.fetch('path', nil)
 
     unless path
       puts 'Looking in uncommitted files ...'.blue
-      modified_files = `git ls-files --modified --others --exclude-standard -- ..`.split("\n")
-      deleted_files = `git ls-files --deleted -- ..`.split("\n")
-      image_files_to_check = (modified_files - deleted_files).select do |file|
-        File.extname(file) =~ /\.(png|jpg|jpeg|gif)/i
-      end
+      files = ImageTasksHelper.uncommitted_image_files
+      next puts 'No images to check.'.magenta if files.empty?
 
-      next puts 'No images to check.'.magenta if image_files_to_check.empty?
-
-      path = image_files_to_check.join(' ')
+      path = files.join(' ')
     end
 
     system "bundle exec image_optim --recursive --no-svgo #{path}"
@@ -55,24 +73,16 @@ namespace :images do
   task :unused do
     puts 'Running a task for finding unused images (png,svg,jpeg,jpg,ico)'.magenta
     images = FileList['../help/**/*.{png,svg,jpeg,jpg,ico}']
-
     puts "The project contains a total of #{images.size} images."
 
     puts 'Checking for unlinked images...'
     Dir['../help/**/*.{md}'].each do |file|
-      # Exclude symlinks
-      next if File.symlink? file
+      next if File.symlink?(file)
 
-      images.delete_if { |image| File.read(file).include?(File.basename(image)) }
+      content = File.read(file)
+      images.delete_if { |img| ImageTasksHelper.image_linked?(content, File.basename(img)) }
     end
 
-    if images.empty?
-      puts 'No unlinked images'.green
-    else
-      images.each do |image|
-        puts "No links for #{image}".yellow
-      end
-      puts "Found #{images.size} dangling images".red
-    end
+    ImageTasksHelper.report_unused_images(images)
   end
 end

@@ -1,0 +1,59 @@
+AllCops:
+  TargetRubyVersion: 3.3
+  NewCops: enable
+  Exclude:
+    - 'pkg/**/*'
+    - 'tmp/**/*'
+    - 'vendor/**/*'
+
+# Allow longer blocks in test files and rake tasks
+Metrics/BlockLength:
+  Exclude:
+    - 'test/**/*'
+    - 'rakelib/**/*'
+    - '*.gemspec'
+
+# Allow longer methods in test files
+Metrics/MethodLength:
+  Exclude:
+    - 'test/**/*'
+
+# Allow longer classes in test files
+Metrics/ClassLength:
+  Exclude:
+    - 'test/**/*'
+
+# Allow longer modules for helper modules
+Metrics/ModuleLength:
+  Exclude:
+    - 'rakelib/**/*'
+
+# Gemspec does not need MFA for internal gems
+Gemspec/RequireMFA:
+  Enabled: false
+
+# Allow runtime dependencies in gemspec
+Gemspec/AddRuntimeDependency:
+  Enabled: false
+
+# Allow development dependencies in gemspec (common for gems)
+Gemspec/DevelopmentDependencies:
+  Enabled: false
+
+# Allow gem naming convention (hyphenated names are common)
+Naming/FileName:
+  Exclude:
+    - 'lib/adobe-comdox-exl-rake-tasks.rb'
+    - 'lib/adobe-comdox-exl-rake-tasks/**/*'
+
+# Documentation is optional for test files and lib modules
+Style/Documentation:
+  Exclude:
+    - 'test/**/*'
+    - 'lib/**/*'
+
+# Allow longer lines in gemspec for description
+Layout/LineLength:
+  Max: 120
+  Exclude:
+    - '*.gemspec'

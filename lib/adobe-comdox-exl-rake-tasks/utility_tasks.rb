@@ -29,7 +29,7 @@ module AdobeComdoxExlRakeTasks
     # Available tasks:
     # - whatsnew - Generate data for news digest
     # - render - Render templated files and maintain includes
-    
+
     def self.available_tasks
       %w[
         whatsnew

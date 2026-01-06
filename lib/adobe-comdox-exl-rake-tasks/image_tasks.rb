@@ -29,7 +29,7 @@ module AdobeComdoxExlRakeTasks
     # Available tasks:
     # - images:optimize - Optimize images in modified files
     # - images:unused - Find unused images
-    
+
     def self.available_tasks
       %w[
         images:optimize

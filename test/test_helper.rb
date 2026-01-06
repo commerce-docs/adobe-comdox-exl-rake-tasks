@@ -23,22 +23,24 @@
 
 # frozen_string_literal: true
 
-# Module for Adobe Commerce Docs in ExL include management tasks
-module AdobeComdoxExlRakeTasks
-  module IncludesTasks
-    # Available tasks:
-    # - includes:maintain_relationships - Discover and maintain include relationships
-    # - includes:maintain_timestamps - Update timestamps based on include changes
-    # - includes:maintain_all - Run both operations in sequence
-    # - includes:unused - Find unused include files
+require 'minitest/autorun'
+require 'fileutils'
 
-    def self.available_tasks
-      %w[
-        includes:maintain_relationships
-        includes:maintain_timestamps
-        includes:maintain_all
-        includes:unused
-      ]
-    end
+# Add lib to load path
+$LOAD_PATH.unshift File.expand_path('../lib', __dir__)
+
+require 'adobe-comdox-exl-rake-tasks'
+
+# Test helper module with common utilities
+module TestHelper
+  # Create a temporary test directory structure
+  def setup_test_directory(base_path)
+    FileUtils.mkdir_p(base_path)
+    yield if block_given?
+  end
+
+  # Clean up temporary test directory
+  def teardown_test_directory(base_path)
+    FileUtils.rm_rf(base_path)
   end
 end

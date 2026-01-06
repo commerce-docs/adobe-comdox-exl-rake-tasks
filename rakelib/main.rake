@@ -28,15 +28,15 @@
 # Source: commerce-operations.en repository (most up-to-date)
 
 # Common requires for all rake tasks
+require 'fileutils'
 require 'yaml'
 require 'colorator'
 require 'date'
-require 'json'
 require 'tzinfo'
 
-# Note: Individual namespace tasks have been moved to separate files:
+# NOTE: Individual namespace tasks have been moved to separate files:
 # - includes.rake: Include management tasks
-# - images.rake: Image management tasks  
+# - images.rake: Image management tasks
 # - whatsnew.rake: What's new tasks
 # - utility.rake: Utility tasks
 #
@@ -47,7 +47,7 @@ desc 'Generate data for a news digest.
       Default timeframe is since last update.
       For other period, use "since" argument, such as, bundle exec rake whatsnew since="jul 4"'
 task :whatsnew do
-  since = ENV['since']
+  since = ENV.fetch('since', nil)
   current_file = '_data/whats-new.yml'
   generated_file = 'tmp/whats-new.yml'
   current_data = YAML.load_file current_file
@@ -80,8 +80,59 @@ end
 
 # Utility Tasks
 desc 'Render the templated files.
-  Renders the templated files in the "_jekyll/templates" directory. The result will be found in the "help/includes/templated" directory.'
+  Renders the templated files in the "_jekyll/templates" directory.
+  The result will be found in the "help/_includes/templated" directory.
+  Requires Jekyll to be installed in the consuming project.'
 task :render do
-  sh '_scripts/render'
+  RenderTaskHelper.render_templates
   Rake::Task['includes:maintain_all'].invoke
+end
+
+# Helper module for render task
+module RenderTaskHelper
+  JEKYLL_DIR = '../_jekyll'
+  SITE_DIR = "#{JEKYLL_DIR}/_site".freeze
+  TEMPLATED_SRC = "#{SITE_DIR}/templated".freeze
+  TEMPLATED_DEST = '../help/_includes/templated'
+
+  def self.render_templates
+    puts 'Rendering templated files...'.magenta
+
+    verify_jekyll_installed
+    run_jekyll_build
+    rename_html_to_md
+    copy_to_includes
+
+    puts 'Templates rendered successfully.'.green
+  end
+
+  def self.verify_jekyll_installed
+    return if system('bundle exec jekyll --version > /dev/null 2>&1')
+
+    abort 'Error: Jekyll is required for the render task. Add "gem \'jekyll\'" to your Gemfile.'.red
+  end
+
+  def self.run_jekyll_build
+    puts 'Running Jekyll build...'.blue
+    Dir.chdir(JEKYLL_DIR) do
+      success = system('bundle exec jekyll build --disable-disk-cache')
+      abort 'Jekyll build failed.'.red unless success
+    end
+  end
+
+  def self.rename_html_to_md
+    puts 'Converting .html files to .md...'.blue
+    Dir.glob("#{SITE_DIR}/**/*.html").each do |html_file|
+      md_file = html_file.sub(/\.html$/, '.md')
+      FileUtils.mv(html_file, md_file)
+    end
+  end
+
+  def self.copy_to_includes
+    return unless Dir.exist?(TEMPLATED_SRC)
+
+    puts 'Copying rendered templates to help/_includes/templated/...'.blue
+    FileUtils.mkdir_p(TEMPLATED_DEST)
+    FileUtils.cp_r(Dir.glob("#{TEMPLATED_SRC}/*"), TEMPLATED_DEST)
+  end
 end

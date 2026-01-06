@@ -18,7 +18,7 @@ task :build do
 end
 
 desc 'Install the gem locally'
-task :install => :build do
+task install: :build do
   sh 'gem install ./adobe-comdox-exl-rake-tasks-0.1.0.gem'
 end
 

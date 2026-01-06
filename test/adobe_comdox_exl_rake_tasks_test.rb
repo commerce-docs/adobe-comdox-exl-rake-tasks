@@ -23,22 +23,25 @@
 
 # frozen_string_literal: true
 
-# Module for Adobe Commerce Docs in ExL include management tasks
-module AdobeComdoxExlRakeTasks
-  module IncludesTasks
-    # Available tasks:
-    # - includes:maintain_relationships - Discover and maintain include relationships
-    # - includes:maintain_timestamps - Update timestamps based on include changes
-    # - includes:maintain_all - Run both operations in sequence
-    # - includes:unused - Find unused include files
+require_relative 'test_helper'
 
-    def self.available_tasks
-      %w[
-        includes:maintain_relationships
-        includes:maintain_timestamps
-        includes:maintain_all
-        includes:unused
-      ]
-    end
+class AdobeComdoxExlRakeTasksTest < Minitest::Test
+  def test_version_is_defined
+    assert defined?(AdobeComdoxExlRakeTasks::VERSION)
+  end
+
+  def test_version_is_string
+    assert_kind_of String, AdobeComdoxExlRakeTasks::VERSION
+  end
+
+  def test_version_format
+    # Version should be in semver format (x.y.z)
+    assert_match(/\A\d+\.\d+\.\d+\z/, AdobeComdoxExlRakeTasks::VERSION)
+  end
+
+  def test_modules_are_defined
+    assert defined?(AdobeComdoxExlRakeTasks::ImageTasks)
+    assert defined?(AdobeComdoxExlRakeTasks::IncludesTasks)
+    assert defined?(AdobeComdoxExlRakeTasks::UtilityTasks)
   end
 end

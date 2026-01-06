@@ -23,22 +23,36 @@
 
 # frozen_string_literal: true
 
-# Module for Adobe Commerce Docs in ExL include management tasks
-module AdobeComdoxExlRakeTasks
-  module IncludesTasks
-    # Available tasks:
-    # - includes:maintain_relationships - Discover and maintain include relationships
-    # - includes:maintain_timestamps - Update timestamps based on include changes
-    # - includes:maintain_all - Run both operations in sequence
-    # - includes:unused - Find unused include files
+require_relative 'test_helper'
 
-    def self.available_tasks
-      %w[
-        includes:maintain_relationships
-        includes:maintain_timestamps
-        includes:maintain_all
-        includes:unused
-      ]
-    end
+class IncludesTasksTest < Minitest::Test
+  def test_available_tasks_returns_array
+    tasks = AdobeComdoxExlRakeTasks::IncludesTasks.available_tasks
+    assert_kind_of Array, tasks
+  end
+
+  def test_available_tasks_includes_maintain_relationships
+    tasks = AdobeComdoxExlRakeTasks::IncludesTasks.available_tasks
+    assert_includes tasks, 'includes:maintain_relationships'
+  end
+
+  def test_available_tasks_includes_maintain_timestamps
+    tasks = AdobeComdoxExlRakeTasks::IncludesTasks.available_tasks
+    assert_includes tasks, 'includes:maintain_timestamps'
+  end
+
+  def test_available_tasks_includes_maintain_all
+    tasks = AdobeComdoxExlRakeTasks::IncludesTasks.available_tasks
+    assert_includes tasks, 'includes:maintain_all'
+  end
+
+  def test_available_tasks_includes_unused
+    tasks = AdobeComdoxExlRakeTasks::IncludesTasks.available_tasks
+    assert_includes tasks, 'includes:unused'
+  end
+
+  def test_available_tasks_count
+    tasks = AdobeComdoxExlRakeTasks::IncludesTasks.available_tasks
+    assert_equal 4, tasks.size
   end
 end
