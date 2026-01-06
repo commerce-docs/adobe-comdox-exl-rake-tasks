@@ -112,13 +112,13 @@ gem build adobe-comdox-exl-rake-tasks.gemspec
 ### Installing Locally
 
 ```bash
-gem install ./adobe-comdox-exl-rake-tasks-0.2.0.gem
+gem install ./adobe-comdox-exl-rake-tasks-0.3.0.gem
 ```
 
 ### Running Tests
 
 ```bash
-bundle exec rspec
+bundle exec rake test
 ```
 
 ## Contributing

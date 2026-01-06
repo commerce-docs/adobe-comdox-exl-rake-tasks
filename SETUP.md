@@ -168,7 +168,7 @@ jobs:
       - uses: actions/checkout@v3
       - uses: ruby/setup-ruby@v1
         with:
-          ruby-version: '3.0'
+          ruby-version: '3.3'
           bundler-cache: true
       - run: bundle exec rake includes:maintain_all
       - run: bundle exec rake unused_images

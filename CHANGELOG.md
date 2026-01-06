@@ -5,11 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-01-06
+
+### Changed
+
+- **Ruby version** - Updated minimum required Ruby version to `>= 3.3.0`
+- **Test framework** - Replaced RSpec with Minitest for testing (35 tests, 89 assertions)
+- **Code quality** - Refactored rake tasks into helper modules (`ImageTasksHelper`, `IncludesTasksHelper`) for better maintainability
+- **Unused detection accuracy** - `images:unused` now detects proper Markdown (`![alt](path)`) and HTML (`<img src="path">`) image syntax instead of plain text mentions
+- **Include detection accuracy** - `includes:unused` now detects proper ExL include syntax (`{{$include /help/_includes/file.md}}`) per the [Experience League Authoring Guide](https://experienceleague.adobe.com/en/docs/authoring-guide/using/markdown/markdown-syntax#snippets-and-includes)
+
+### Added
+
+- **Test suite** - Added comprehensive unit and integration tests using Minitest
+- **Dependency** - Added `image_optim_pack` (~> 0.12) for image optimization binaries
+
+### Removed
+
+- **Unused dependency** - Removed `json` dependency (not used in codebase)
+- **Test directory** - Removed unused `test_repo` directory
+
 ## [0.2.0] - 2025-01-27
 
 ### Changed
 
-- **Include Management Tasks** - Removed verbose logging for cleaner task execution
+- **Include management tasks** - Removed verbose logging for cleaner task execution
   - Simplified task output by removing comprehensive logging system
   - Tasks now run more quietly while maintaining all core functionality
 
