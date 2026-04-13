@@ -6,7 +6,7 @@ source 'https://rubygems.org'
 gemspec
 
 # Runtime dependencies with git sources (can't be specified in gemspec)
-gem 'whatsup_github', git: 'https://github.com/commerce-docs/whatsup_github', tag: 'v1.2.0'
+gem 'whatsup_github', git: 'https://github.com/commerce-docs/whatsup_github', ref: 'v2.0.0'
 
 # Additional dependencies for development and testing
 gem 'tzinfo', '~> 2.0'
