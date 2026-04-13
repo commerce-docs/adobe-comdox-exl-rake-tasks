@@ -12,12 +12,12 @@ GIT
 PATH
   remote: .
   specs:
-    adobe-comdox-exl-rake-tasks (0.3.0)
+    adobe-comdox-exl-rake-tasks (0.3.1)
       colorator (~> 1.1)
       date (~> 3.3)
       image_optim (~> 0.31)
       image_optim_pack (~> 0.12)
-      jekyll (~> 4.3)
+      jekyll (~> 4.4)
       rake (~> 13.0)
       tzinfo (~> 2.0)
       yaml (~> 0.3)
@@ -185,9 +185,9 @@ PLATFORMS
 DEPENDENCIES
   adobe-comdox-exl-rake-tasks!
   bundler (~> 2.0)
-  minitest (~> 5.25)
+  minitest (~> 5.27)
   rake (~> 13.0)
-  rubocop (~> 1.70)
+  rubocop (~> 1.82)
   tzinfo (~> 2.0)
   whatsup_github!
   yard (~> 0.9)
