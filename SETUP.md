@@ -18,7 +18,7 @@ gem 'rake'
 gem 'adobe-comdox-exl-rake-tasks', git: 'https://github.com/commerce-docs/adobe-comdox-exl-rake-tasks.git'
 
 # Required for whatsnew task (generates What's New digests from GitHub activity)
-gem 'whatsup_github', git: 'https://github.com/commerce-docs/whatsup_github', tag: 'v1.2.0'
+gem 'whatsup_github', git: 'https://github.com/commerce-docs/whatsup_github', tag: 'v2.0.0'
 ```
 
 > **Note:** The `whatsup_github` gem is required for the `whatsnew` rake task. If you don't need What's New generation, you can omit it.

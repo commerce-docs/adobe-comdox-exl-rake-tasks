@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.1] - 2026-04-13
+
+### Changed
+
+- **Dependency** - Updated `whatsup_github` to v2.0.0
+- **Dependency** - Updated `jekyll` to `~> 4.4`
+- **Dev dependency** - Updated `minitest` to `~> 5.27`
+- **Dev dependency** - Updated `rubocop` to `~> 1.82`
+
 ## [0.3.0] - 2026-01-06
 
 ### Changed
