@@ -89,14 +89,21 @@ bundle exec rake images:check_size path=help/assets
 
 `images:svg_to_png` picks a converter automatically and keeps the original SVG:
 
-- **librsvg** (`rsvg-convert`) is preferred when installed - it resolves named
-  fonts more reliably than ImageMagick's built-in SVG renderer.
-- **ImageMagick** (`magick`/`convert`) is used as a fallback.
-- **Google Chrome or Chromium** is used automatically for SVGs exported from
-  draw.io/diagrams.net that embed rich text via `<foreignObject>` (neither
-  librsvg nor ImageMagick render `foreignObject`, so they'd otherwise fall
-  back to a truncated placeholder). If no Chromium-based browser is found,
-  the task warns and falls back to librsvg/ImageMagick anyway.
+- SVGs that embed rich text via `<foreignObject>` (e.g. draw.io/diagrams.net
+  exports) are rendered with **Google Chrome or Chromium** when available,
+  since neither librsvg nor ImageMagick support `foreignObject` and would
+  otherwise silently fall back to a truncated placeholder. If no
+  Chromium-based browser is found, the task warns and falls through to the
+  options below anyway.
+- **librsvg** (`rsvg-convert`) is preferred for everything else when
+  installed - it resolves named fonts more reliably than ImageMagick's
+  built-in SVG renderer.
+- **ImageMagick** (`magick`/`convert`) is used as a fallback if librsvg isn't
+  installed.
+- **Google Chrome or Chromium** is used as a last resort for any SVG (not
+  just `foreignObject` ones) if neither librsvg nor ImageMagick is
+  installed - useful in CI environments (e.g. GitHub Actions' `ubuntu-latest`
+  runners) that ship a browser but not the other tools.
 
 Install at least one converter:
 
