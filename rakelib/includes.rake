@@ -203,7 +203,7 @@ module IncludesTasksHelper
       content = File.read(file)
       includes.delete_if do |include|
         include_relative = Regexp.escape(include.sub('../help/_includes/', ''))
-        content.match?(/\{\{\$include\s+[^}]*#{include_relative}\}\}/)
+        content.match?(%r{\{\{\$include\s+/help/_includes/#{include_relative}\}\}})
       end
     end
   end

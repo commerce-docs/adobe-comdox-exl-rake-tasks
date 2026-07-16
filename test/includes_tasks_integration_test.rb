@@ -270,6 +270,30 @@ class IncludesTasksIntegrationTest < Minitest::Test
     refute_includes output, 'a/notes.md'
   end
 
+  def test_unused_includes_handles_nested_path_matching_a_shorter_paths_suffix
+    # notes.md exists both on its own and nested one level deeper under sub/,
+    # so the shorter path's relative form ("a/notes.md") is a literal suffix
+    # of the deeper one's ("sub/a/notes.md").
+    create_test_file('help/_includes/a/notes.md', 'Notes A')
+    create_test_file('help/_includes/sub/a/notes.md', 'Notes Sub A')
+
+    # Only the deeper one is referenced.
+    create_test_file('help/main.md', <<~MARKDOWN)
+      ---
+      title: Main
+      ---
+
+      {{$include /help/_includes/sub/a/notes.md}}
+    MARKDOWN
+
+    output = run_task_in_workspace('includes:unused')
+
+    # The shorter a/notes.md must still be reported as unused -- its relative
+    # path being a suffix of the referenced path must not count as a match.
+    assert_includes output, 'a/notes.md'
+    refute_includes output, 'sub/a/notes.md'
+  end
+
   def test_maintain_all_runs_both_tasks_in_sequence
     create_test_file('help/doc.md', <<~MARKDOWN)
       ---
