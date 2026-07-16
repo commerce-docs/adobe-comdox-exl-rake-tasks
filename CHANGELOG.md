@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2026-07-16
+
+### Added
+
+- **New task** - `images:svg_to_png` - Convert SVG images to PNG format by path, keeping the original SVG (requires ImageMagick)
+- **New task** - `images:check_size` - Check SVG images against the 140 KB size limit for ExL
+- **Dependency** - Added `mini_magick` (~> 5.1) for SVG-to-PNG conversion
+- **Test suite** - Added integration tests for the new SVG tasks and for `includes:maintain_timestamps` / `includes:maintain_all`
+
+### Changed
+
+- **`images:optimize`** - Now automatically runs `images:check_size` when the target path contains SVG files
+- **Test helper** - Replaced `reenable_task` with `reenable_all_tasks`, which reenables every defined rake task between test runs instead of only the invoked task and its declared prerequisites, fixing tasks invoked programmatically (e.g. from within `render`) not being reenabled
+- **Documentation** - Corrected stale task names and examples in the README (`images:optimize`, `images:unused`, `includes:unused`) and removed a reference to a `whatsnew_bp` task that doesn't exist in the codebase
+
 ## [0.3.1] - 2026-04-13
 
 ### Changed
