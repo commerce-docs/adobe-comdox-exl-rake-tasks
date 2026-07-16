@@ -29,11 +29,15 @@ module AdobeComdoxExlRakeTasks
     # Available tasks:
     # - images:optimize - Optimize images in modified files
     # - images:unused - Find unused images
+    # - images:svg_to_png - Convert SVG images to PNG format by path
+    # - images:check_size - Check SVG images against the size limit by path
 
     def self.available_tasks
       %w[
         images:optimize
         images:unused
+        images:svg_to_png
+        images:check_size
       ]
     end
   end

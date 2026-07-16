@@ -132,6 +132,28 @@ class ImagesTasksIntegrationTest < Minitest::Test
     assert_includes output, 'Checking images'
   end
 
+  def test_optimize_with_path_containing_svg_runs_check_size
+    create_test_file('help/assets/icon.svg', '<svg></svg>')
+    ENV['path'] = File.join(TEMP_DIR, 'help/assets')
+
+    output = run_task_in_workspace('images:optimize')
+
+    assert_includes output, 'within the 140 KB size limit'
+  ensure
+    ENV.delete('path')
+  end
+
+  def test_optimize_with_path_without_svg_skips_check_size
+    create_test_file('help/assets/pic.png', 'fake png content')
+    ENV['path'] = File.join(TEMP_DIR, 'help/assets')
+
+    output = run_task_in_workspace('images:optimize')
+
+    refute_includes output, 'size limit'
+  ensure
+    ENV.delete('path')
+  end
+
   def test_image_with_empty_alt_text_counts_as_used
     # ExL supports ![](image.png) syntax (empty alt text)
     create_test_file('help/assets/diagram.png', 'fake png content')
@@ -197,5 +219,172 @@ class ImagesTasksIntegrationTest < Minitest::Test
     assert_includes output, 'photo.jpeg'
     assert_includes output, 'icon.ico'
     assert_includes output, 'vector.svg'
+  end
+
+  def test_svg_to_png_without_path_shows_message
+    ENV.delete('path')
+
+    output = run_task_in_workspace('images:svg_to_png')
+
+    assert_includes output, 'provide a path'
+  end
+
+  def test_svg_to_png_with_no_svgs_found
+    create_test_file('help/assets/.keep', '')
+    ENV['path'] = File.join(TEMP_DIR, 'help/assets')
+
+    output = run_task_in_workspace('images:svg_to_png')
+
+    assert_includes output, 'No SVG images found'
+  ensure
+    ENV.delete('path')
+  end
+
+  def test_svg_to_png_with_path_to_single_file
+    skip 'No SVG conversion tool is installed' unless ImageTasksHelper.svg_conversion_available?
+
+    create_test_file('help/assets/icon.svg', <<~SVG)
+      <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10">
+        <rect width="10" height="10" fill="red"/>
+      </svg>
+    SVG
+    ENV['path'] = File.join(TEMP_DIR, 'help/assets/icon.svg')
+
+    output = run_task_in_workspace('images:svg_to_png')
+
+    assert_includes output, 'Converted'
+    assert file_exists?('help/assets/icon.png')
+  ensure
+    ENV.delete('path')
+  end
+
+  def test_svg_to_png_reports_missing_imagemagick
+    create_test_file('help/assets/icon.svg', '<svg></svg>')
+    ENV['path'] = File.join(TEMP_DIR, 'help/assets')
+
+    output = ImageTasksHelper.stub(:svg_conversion_available?, false) do
+      run_task_in_workspace('images:svg_to_png')
+    end
+
+    assert_includes output, 'is required to convert SVGs to PNG'
+    refute file_exists?('help/assets/icon.png')
+  ensure
+    ENV.delete('path')
+  end
+
+  def test_svg_to_png_converts_svg_to_png
+    skip 'No SVG conversion tool is installed' unless ImageTasksHelper.svg_conversion_available?
+
+    create_test_file('help/assets/icon.svg', <<~SVG)
+      <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10">
+        <rect width="10" height="10" fill="red"/>
+      </svg>
+    SVG
+    ENV['path'] = File.join(TEMP_DIR, 'help/assets')
+
+    output = run_task_in_workspace('images:svg_to_png')
+
+    assert_includes output, 'Converted'
+    assert file_exists?('help/assets/icon.png')
+    assert file_exists?('help/assets/icon.svg'), 'original SVG should be kept, not replaced'
+  ensure
+    ENV.delete('path')
+  end
+
+  def test_svg_to_png_uses_chrome_for_foreign_object_svg
+    skip 'Chrome/Chromium is not installed' unless ImageTasksHelper.chrome_available?
+
+    create_test_file('help/assets/diagram.svg', <<~SVG)
+      <svg xmlns="http://www.w3.org/2000/svg" width="50" height="50">
+        <foreignObject width="100%" height="100%">
+          <div xmlns="http://www.w3.org/1999/xhtml">hello</div>
+        </foreignObject>
+      </svg>
+    SVG
+    ENV['path'] = File.join(TEMP_DIR, 'help/assets/diagram.svg')
+
+    output = run_task_in_workspace('images:svg_to_png')
+
+    assert_includes output, 'Converted'
+    assert file_exists?('help/assets/diagram.png')
+  ensure
+    ENV.delete('path')
+  end
+
+  def test_svg_to_png_warns_when_foreign_object_svg_without_chrome
+    create_test_file('help/assets/diagram.svg', <<~SVG)
+      <svg xmlns="http://www.w3.org/2000/svg" width="50" height="50">
+        <foreignObject width="100%" height="100%">
+          <div xmlns="http://www.w3.org/1999/xhtml">hello</div>
+        </foreignObject>
+      </svg>
+    SVG
+    ENV['path'] = File.join(TEMP_DIR, 'help/assets/diagram.svg')
+
+    # Stub svg_conversion_available? too so the task-level gate passes regardless of which
+    # (if any) SVG conversion tools are actually installed in the environment running this test.
+    output = ImageTasksHelper.stub(:chrome_available?, false) do
+      ImageTasksHelper.stub(:svg_conversion_available?, true) do
+        run_task_in_workspace('images:svg_to_png')
+      end
+    end
+
+    assert_includes output, 'embeds HTML content'
+  ensure
+    ENV.delete('path')
+  end
+
+  def test_check_size_without_path_shows_message
+    ENV.delete('path')
+
+    output = run_task_in_workspace('images:check_size')
+
+    assert_includes output, 'provide a path'
+  end
+
+  def test_check_size_with_no_svgs_found
+    create_test_file('help/assets/.keep', '')
+    ENV['path'] = File.join(TEMP_DIR, 'help/assets')
+
+    output = run_task_in_workspace('images:check_size')
+
+    assert_includes output, 'No SVG images found'
+  ensure
+    ENV.delete('path')
+  end
+
+  def test_check_size_reports_svgs_within_limit
+    create_test_file('help/assets/icon.svg', '<svg></svg>')
+    ENV['path'] = File.join(TEMP_DIR, 'help/assets')
+
+    output = run_task_in_workspace('images:check_size')
+
+    assert_includes output, 'within the 140 KB size limit'
+  ensure
+    ENV.delete('path')
+  end
+
+  def test_check_size_with_path_to_single_file
+    create_test_file('help/assets/icon.svg', '<svg></svg>')
+    ENV['path'] = File.join(TEMP_DIR, 'help/assets/icon.svg')
+
+    output = run_task_in_workspace('images:check_size')
+
+    assert_includes output, 'within the 140 KB size limit'
+  ensure
+    ENV.delete('path')
+  end
+
+  def test_check_size_reports_oversized_svgs
+    create_test_file('help/assets/large.svg', "<svg>#{'a' * (140 * 1024)}</svg>")
+    ENV['path'] = File.join(TEMP_DIR, 'help/assets')
+
+    output = run_task_in_workspace('images:check_size')
+
+    assert_includes output, 'large.svg'
+    assert_includes output, 'exceeds 140 KB'
+    assert_includes output, 'Found 1 oversized SVG images'
+  ensure
+    ENV.delete('path')
   end
 end

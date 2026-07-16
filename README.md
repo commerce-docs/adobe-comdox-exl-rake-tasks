@@ -51,6 +51,9 @@ bundle exec rake includes:maintain_timestamps
 
 # Run both tasks in sequence
 bundle exec rake includes:maintain_all
+
+# Find unused include files
+bundle exec rake includes:unused
 ```
 
 ### What's New Generation
@@ -60,9 +63,6 @@ Generate news digests from GitHub activity:
 ```bash
 # Generate What's New digest since last update
 bundle exec rake whatsnew
-
-# Generate Best Practices What's New digest
-bundle exec rake whatsnew_bp
 
 # Generate for specific time period
 bundle exec rake whatsnew since="jul 4"
@@ -74,13 +74,45 @@ Optimize and audit images:
 
 ```bash
 # Optimize images in modified files
-bundle exec rake image_optim
+bundle exec rake images:optimize
 
 # Find unused images
-bundle exec rake unused_images
+bundle exec rake images:unused
 
-# Find unused include files
-bundle exec rake unused_includes
+# Convert SVG images to PNG - path may be a directory or a single file
+bundle exec rake images:svg_to_png path=help/assets
+bundle exec rake images:svg_to_png path=help/assets/diagram.svg
+
+# Check SVG images against the 140 KB size limit for ExL
+bundle exec rake images:check_size path=help/assets
+```
+
+`images:svg_to_png` picks a converter automatically and keeps the original SVG:
+
+- SVGs that embed rich text via `<foreignObject>` (e.g. draw.io/diagrams.net
+  exports) are rendered with **Google Chrome or Chromium** when available,
+  since neither librsvg nor ImageMagick support `foreignObject` and would
+  otherwise silently fall back to a truncated placeholder. If no
+  Chromium-based browser is found, the task warns and falls through to the
+  options below anyway.
+- **librsvg** (`rsvg-convert`) is preferred for everything else when
+  installed - it resolves named fonts more reliably than ImageMagick's
+  built-in SVG renderer.
+- **ImageMagick** (`magick`/`convert`) is used as a fallback if librsvg isn't
+  installed.
+- **Google Chrome or Chromium** is used as a last resort for any SVG (not
+  just `foreignObject` ones) if neither librsvg nor ImageMagick is
+  installed - useful in CI environments (e.g. GitHub Actions' `ubuntu-latest`
+  runners) that ship a browser but not the other tools.
+
+Install at least one converter:
+
+```bash
+# macOS
+brew install librsvg imagemagick
+
+# Debian/Ubuntu
+apt-get install librsvg2-bin imagemagick
 ```
 
 ### Utility Tasks

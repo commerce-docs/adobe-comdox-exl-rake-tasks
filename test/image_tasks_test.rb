@@ -41,8 +41,18 @@ class ImageTasksTest < Minitest::Test
     assert_includes tasks, 'images:unused'
   end
 
+  def test_available_tasks_includes_svg_to_png
+    tasks = AdobeComdoxExlRakeTasks::ImageTasks.available_tasks
+    assert_includes tasks, 'images:svg_to_png'
+  end
+
+  def test_available_tasks_includes_check_size
+    tasks = AdobeComdoxExlRakeTasks::ImageTasks.available_tasks
+    assert_includes tasks, 'images:check_size'
+  end
+
   def test_available_tasks_count
     tasks = AdobeComdoxExlRakeTasks::ImageTasks.available_tasks
-    assert_equal 2, tasks.size
+    assert_equal 4, tasks.size
   end
 end

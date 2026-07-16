@@ -28,6 +28,7 @@ Gem::Specification.new do |spec|
   spec.add_dependency 'image_optim', '~> 0.31'
   spec.add_dependency 'image_optim_pack', '~> 0.12'
   spec.add_dependency 'jekyll', '~> 4.4'
+  spec.add_dependency 'mini_magick', '~> 5.1'
   spec.add_dependency 'rake', '~> 13.0'
   spec.add_dependency 'tzinfo', '~> 2.0'
   spec.add_dependency 'yaml', '~> 0.3'

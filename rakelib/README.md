@@ -26,6 +26,8 @@ Contains image management tasks organized in the `:images` namespace:
 
 - `images:optimize` - Optimize images in modified uncommitted files
 - `images:unused` - Find unused images in the project
+- `images:svg_to_png` - Convert SVG images to PNG format by path (file or directory), keeping the original SVG
+- `images:check_size` - Check SVG images against the 140 KB size limit for ExL
 
 ## How it works
 
