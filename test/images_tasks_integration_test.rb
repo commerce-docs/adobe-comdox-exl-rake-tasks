@@ -241,7 +241,7 @@ class ImagesTasksIntegrationTest < Minitest::Test
   end
 
   def test_svg_to_png_with_path_to_single_file
-    skip 'ImageMagick is not installed' unless ImageTasksHelper.imagemagick_available?
+    skip 'No SVG conversion tool is installed' unless ImageTasksHelper.svg_conversion_available?
 
     create_test_file('help/assets/icon.svg', <<~SVG)
       <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10">
@@ -262,18 +262,18 @@ class ImagesTasksIntegrationTest < Minitest::Test
     create_test_file('help/assets/icon.svg', '<svg></svg>')
     ENV['path'] = File.join(TEMP_DIR, 'help/assets')
 
-    output = ImageTasksHelper.stub(:imagemagick_available?, false) do
+    output = ImageTasksHelper.stub(:svg_conversion_available?, false) do
       run_task_in_workspace('images:svg_to_png')
     end
 
-    assert_includes output, 'ImageMagick is required'
+    assert_includes output, 'is required to convert SVGs to PNG'
     refute file_exists?('help/assets/icon.png')
   ensure
     ENV.delete('path')
   end
 
   def test_svg_to_png_converts_svg_to_png
-    skip 'ImageMagick is not installed' unless ImageTasksHelper.imagemagick_available?
+    skip 'No SVG conversion tool is installed' unless ImageTasksHelper.svg_conversion_available?
 
     create_test_file('help/assets/icon.svg', <<~SVG)
       <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10">

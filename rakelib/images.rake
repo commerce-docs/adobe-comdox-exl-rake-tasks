@@ -60,6 +60,14 @@ module ImageTasksHelper
     system('command -v magick > /dev/null 2>&1') || system('command -v convert > /dev/null 2>&1')
   end
 
+  def self.rsvg_convert_available?
+    system('command -v rsvg-convert > /dev/null 2>&1')
+  end
+
+  def self.svg_conversion_available?
+    rsvg_convert_available? || imagemagick_available?
+  end
+
   def self.svgs_for_path(path)
     return [path] if File.file?(path)
 
@@ -83,6 +91,25 @@ module ImageTasksHelper
 
   def self.convert_svg_to_png(svg)
     png = svg.sub(/\.svg\z/i, '.png')
+
+    # Prefer rsvg-convert: ImageMagick's built-in SVG renderer takes priority over its
+    # rsvg-convert delegate on many builds and fails to resolve named fonts in SVG text.
+    if rsvg_convert_available?
+      convert_with_rsvg(svg, png)
+    else
+      convert_with_imagemagick(svg, png)
+    end
+  end
+
+  def self.convert_with_rsvg(svg, png)
+    if system('rsvg-convert', '--dpi-x', '96', '--dpi-y', '96', '-o', png, svg)
+      puts "Converted #{svg} -> #{png}".green
+    else
+      puts "Failed to convert #{svg}: rsvg-convert exited with an error".red
+    end
+  end
+
+  def self.convert_with_imagemagick(svg, png)
     image = MiniMagick::Image.open(svg)
     image.format('png')
     image.write(png)
@@ -146,9 +173,10 @@ namespace :images do
     svgs = ImageTasksHelper.svgs_for_path(path)
     next puts 'No SVG images found.'.magenta if svgs.empty?
 
-    unless ImageTasksHelper.imagemagick_available?
-      puts 'ImageMagick is required to convert SVGs to PNG.'.red
-      puts 'Install it with "brew install imagemagick" (macOS) or "apt-get install imagemagick" (Debian/Ubuntu).'.yellow
+    unless ImageTasksHelper.svg_conversion_available?
+      puts 'ImageMagick or librsvg (rsvg-convert) is required to convert SVGs to PNG.'.red
+      puts 'Install with "brew install imagemagick librsvg" (macOS) or ' \
+           '"apt-get install imagemagick librsvg2-bin" (Debian/Ubuntu).'.yellow
       next
     end
 
