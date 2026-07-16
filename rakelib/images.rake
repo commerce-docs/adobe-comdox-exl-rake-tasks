@@ -64,8 +64,51 @@ module ImageTasksHelper
     system('command -v rsvg-convert > /dev/null 2>&1')
   end
 
+  CHROME_PATH_CANDIDATES = %w[google-chrome google-chrome-stable chromium chromium-browser microsoft-edge].freeze
+
+  CHROME_APP_CANDIDATES = [
+    '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+    '/Applications/Chromium.app/Contents/MacOS/Chromium',
+    '/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge'
+  ].freeze
+
+  def self.chrome_binary
+    return ENV['CHROME_PATH'] if ENV['CHROME_PATH'] && File.executable?(ENV['CHROME_PATH'])
+
+    found = CHROME_PATH_CANDIDATES.find { |bin| system("command -v #{bin} > /dev/null 2>&1") }
+    return found if found
+
+    CHROME_APP_CANDIDATES.find { |path| File.executable?(path) }
+  end
+
+  def self.chrome_available?
+    !chrome_binary.nil?
+  end
+
   def self.svg_conversion_available?
-    rsvg_convert_available? || imagemagick_available?
+    rsvg_convert_available? || imagemagick_available? || chrome_available?
+  end
+
+  # draw.io/diagrams.net exports embed rich text as HTML via <foreignObject>, with a plain
+  # <text> fallback for renderers without HTML support. Neither rsvg-convert nor ImageMagick
+  # render foreignObject, so they silently fall back to the truncated placeholder text.
+  def self.foreign_object_svg?(svg)
+    File.read(svg).include?('<foreignObject')
+  end
+
+  def self.svg_dimensions(svg)
+    default = [1600, 1200]
+    root = File.read(svg)[/<svg[^>]*>/m]
+    return default unless root
+
+    width = root[/\bwidth="([\d.]+)(?:px)?"/, 1]
+    height = root[/\bheight="([\d.]+)(?:px)?"/, 1]
+    return [width.to_f.ceil, height.to_f.ceil] if width && height
+
+    view_box = root.match(/viewBox="[-\d.]+\s+[-\d.]+\s+([\d.]+)\s+([\d.]+)"/)
+    return [view_box[1].to_f.ceil, view_box[2].to_f.ceil] if view_box
+
+    default
   end
 
   def self.svgs_for_path(path)
@@ -91,13 +134,36 @@ module ImageTasksHelper
 
   def self.convert_svg_to_png(svg)
     png = svg.sub(/\.svg\z/i, '.png')
+    return convert_with_chrome(svg, png) if foreign_object_svg?(svg) && chrome_available?
+
+    warn_missing_chrome(svg) if foreign_object_svg?(svg)
 
     # Prefer rsvg-convert: ImageMagick's built-in SVG renderer takes priority over its
     # rsvg-convert delegate on many builds and fails to resolve named fonts in SVG text.
-    if rsvg_convert_available?
-      convert_with_rsvg(svg, png)
+    rsvg_convert_available? ? convert_with_rsvg(svg, png) : convert_with_imagemagick(svg, png)
+  end
+
+  def self.warn_missing_chrome(svg)
+    puts "#{svg} embeds HTML content (foreignObject); install Google Chrome or Chromium " \
+         'for accurate text rendering, otherwise it will be replaced with a placeholder.'.yellow
+  end
+
+  def self.chrome_screenshot_command(svg, png)
+    width, height = svg_dimensions(svg)
+    svg_url = "file://#{File.expand_path(svg).gsub(' ', '%20')}"
+
+    [
+      chrome_binary, '--headless=new', '--disable-gpu', '--hide-scrollbars',
+      "--window-size=#{width},#{height}", '--force-device-scale-factor=1',
+      "--screenshot=#{File.expand_path(png)}", svg_url
+    ]
+  end
+
+  def self.convert_with_chrome(svg, png)
+    if system(*chrome_screenshot_command(svg, png))
+      puts "Converted #{svg} -> #{png}".green
     else
-      convert_with_imagemagick(svg, png)
+      puts "Failed to convert #{svg}: headless Chrome exited with an error".red
     end
   end
 

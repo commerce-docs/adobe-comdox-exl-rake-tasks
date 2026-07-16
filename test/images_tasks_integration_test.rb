@@ -291,6 +291,45 @@ class ImagesTasksIntegrationTest < Minitest::Test
     ENV.delete('path')
   end
 
+  def test_svg_to_png_uses_chrome_for_foreign_object_svg
+    skip 'Chrome/Chromium is not installed' unless ImageTasksHelper.chrome_available?
+
+    create_test_file('help/assets/diagram.svg', <<~SVG)
+      <svg xmlns="http://www.w3.org/2000/svg" width="50" height="50">
+        <foreignObject width="100%" height="100%">
+          <div xmlns="http://www.w3.org/1999/xhtml">hello</div>
+        </foreignObject>
+      </svg>
+    SVG
+    ENV['path'] = File.join(TEMP_DIR, 'help/assets/diagram.svg')
+
+    output = run_task_in_workspace('images:svg_to_png')
+
+    assert_includes output, 'Converted'
+    assert file_exists?('help/assets/diagram.png')
+  ensure
+    ENV.delete('path')
+  end
+
+  def test_svg_to_png_warns_when_foreign_object_svg_without_chrome
+    create_test_file('help/assets/diagram.svg', <<~SVG)
+      <svg xmlns="http://www.w3.org/2000/svg" width="50" height="50">
+        <foreignObject width="100%" height="100%">
+          <div xmlns="http://www.w3.org/1999/xhtml">hello</div>
+        </foreignObject>
+      </svg>
+    SVG
+    ENV['path'] = File.join(TEMP_DIR, 'help/assets/diagram.svg')
+
+    output = ImageTasksHelper.stub(:chrome_available?, false) do
+      run_task_in_workspace('images:svg_to_png')
+    end
+
+    assert_includes output, 'embeds HTML content'
+  ensure
+    ENV.delete('path')
+  end
+
   def test_check_size_without_path_shows_message
     ENV.delete('path')
 
