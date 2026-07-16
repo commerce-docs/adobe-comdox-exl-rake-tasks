@@ -27,6 +27,10 @@
 # This file contains rake tasks for managing and optimizing images
 
 require 'colorator'
+require 'mini_magick'
+
+# Maximum allowed size for SVG images pushed to ExL repositories
+SVG_SIZE_LIMIT_BYTES = 140 * 1024
 
 # Helper methods for image tasks
 module ImageTasksHelper
@@ -50,6 +54,36 @@ module ImageTasksHelper
       puts "Found #{images.size} dangling images".red
     end
   end
+
+  def self.imagemagick_available?
+    # ImageMagick 7+ provides `magick`; older 6.x installs only have `convert`.
+    system('command -v magick > /dev/null 2>&1') || system('command -v convert > /dev/null 2>&1')
+  end
+
+  def self.oversized_svgs(svgs, limit_bytes = SVG_SIZE_LIMIT_BYTES)
+    svgs.select { |svg| File.size(svg) > limit_bytes }
+  end
+
+  def self.report_oversized_svgs(oversized, limit_bytes = SVG_SIZE_LIMIT_BYTES)
+    limit_kb = limit_bytes / 1024
+
+    if oversized.empty?
+      puts "All SVG images are within the #{limit_kb} KB size limit".green
+    else
+      oversized.each { |svg| puts "#{svg} exceeds #{limit_kb} KB (#{File.size(svg)} bytes)".red }
+      puts "Found #{oversized.size} oversized SVG images".red
+    end
+  end
+
+  def self.convert_svg_to_png(svg)
+    png = svg.sub(/\.svg\z/i, '.png')
+    image = MiniMagick::Image.open(svg)
+    image.format('png')
+    image.write(png)
+    puts "Converted #{svg} -> #{png}".green
+  rescue MiniMagick::Error => e
+    puts "Failed to convert #{svg}: #{e.message}".red
+  end
 end
 
 namespace :images do
@@ -64,6 +98,13 @@ namespace :images do
       next puts 'No images to check.'.magenta if files.empty?
 
       path = files.join(' ')
+    end
+
+    ENV['path'] = path
+    if Dir["#{path}/**/*.svg"].any?
+      check_size_task = Rake::Task['images:check_size']
+      check_size_task.reenable
+      check_size_task.invoke
     end
 
     system "bundle exec image_optim --recursive --no-svgo #{path}"
@@ -84,5 +125,43 @@ namespace :images do
     end
 
     ImageTasksHelper.report_unused_images(images)
+  end
+
+  desc 'Convert SVG images to PNG format by path, e.g. rake images:svg_to_png path=../help/assets/image.svg ' \
+       '(keeps the original SVG).'
+  task :svg_to_png do
+    path = ENV.fetch('path', nil)
+    unless path
+      puts 'Please provide a path to the SVG images.'.red
+      puts 'Example: rake images:svg_to_png path=../help/assets/image.svg'.yellow
+      next
+    end
+
+    svgs = Dir["#{path}/**/*.svg"]
+    next puts 'No SVG images found.'.magenta if svgs.empty?
+
+    unless ImageTasksHelper.imagemagick_available?
+      puts 'ImageMagick is required to convert SVGs to PNG.'.red
+      puts 'Install it with "brew install imagemagick" (macOS) or "apt-get install imagemagick" (Debian/Ubuntu).'.yellow
+      next
+    end
+
+    svgs.each { |svg| ImageTasksHelper.convert_svg_to_png(svg) }
+  end
+
+  desc 'Check SVG images against the size limit by path, e.g. rake images:check_size path=../help/assets.'
+  task :check_size do
+    path = ENV.fetch('path', nil)
+    unless path
+      puts 'Please provide a path to the SVG images.'.red
+      puts 'Example: rake images:check_size path=../help/assets'.yellow
+      next
+    end
+
+    svgs = Dir["#{path}/**/*.svg"]
+    next puts 'No SVG images found.'.magenta if svgs.empty?
+
+    oversized = ImageTasksHelper.oversized_svgs(svgs)
+    ImageTasksHelper.report_oversized_svgs(oversized)
   end
 end
