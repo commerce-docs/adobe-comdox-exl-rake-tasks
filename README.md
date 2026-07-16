@@ -51,6 +51,9 @@ bundle exec rake includes:maintain_timestamps
 
 # Run both tasks in sequence
 bundle exec rake includes:maintain_all
+
+# Find unused include files
+bundle exec rake includes:unused
 ```
 
 ### What's New Generation
@@ -60,9 +63,6 @@ Generate news digests from GitHub activity:
 ```bash
 # Generate What's New digest since last update
 bundle exec rake whatsnew
-
-# Generate Best Practices What's New digest
-bundle exec rake whatsnew_bp
 
 # Generate for specific time period
 bundle exec rake whatsnew since="jul 4"
@@ -74,13 +74,16 @@ Optimize and audit images:
 
 ```bash
 # Optimize images in modified files
-bundle exec rake image_optim
+bundle exec rake images:optimize
 
 # Find unused images
-bundle exec rake unused_images
+bundle exec rake images:unused
 
-# Find unused include files
-bundle exec rake unused_includes
+# Convert SVG images to PNG (requires ImageMagick installed)
+bundle exec rake images:svg_to_png path=help/assets
+
+# Check SVG images against the 140 KB size limit for ExL
+bundle exec rake images:check_size path=help/assets
 ```
 
 ### Utility Tasks
