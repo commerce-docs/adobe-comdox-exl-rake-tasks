@@ -90,17 +90,17 @@ module IntegrationTestHelper
   end
 
   def invoke_task(task_name, output)
-    reenable_task(task_name)
+    reenable_all_tasks
     Rake::Task[task_name].invoke
   rescue StandardError => e
     output.puts "Error: #{e.message}"
   end
 
-  def reenable_task(task_name)
-    task = Rake::Task[task_name]
-    task.reenable
-    task.prerequisites.each do |prereq|
-      Rake::Task[prereq].reenable if Rake::Task.task_defined?(prereq)
-    end
+  # Reenable every defined task, not just task_name and its declared
+  # prerequisites: some tasks (e.g. render) invoke other tasks manually from
+  # within their action rather than declaring them as prerequisites, so a
+  # narrower reenable misses them once they've already run once in the suite.
+  def reenable_all_tasks
+    Rake::Task.tasks.each(&:reenable)
   end
 end
