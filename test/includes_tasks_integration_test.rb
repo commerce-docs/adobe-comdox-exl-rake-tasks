@@ -204,5 +204,45 @@ class IncludesTasksIntegrationTest < Minitest::Test
     assert metadata.key?('auto_discovered'), 'Should have auto_discovered'
     assert metadata.key?('discovery_date'), 'Should have discovery_date'
   end
+
+  def test_maintain_timestamps_processes_existing_relationships
+    create_test_file('help/test-doc.md', <<~MARKDOWN)
+      ---
+      title: Test Document
+      ---
+
+      {{$include /help/_includes/snippet.md}}
+    MARKDOWN
+    create_test_file('help/_includes/snippet.md', 'This is a reusable snippet.')
+
+    # include-relationships.yml must already exist, or the task exits the process
+    run_task_in_workspace('includes:maintain_relationships')
+    output = run_task_in_workspace('includes:maintain_timestamps')
+
+    assert_includes output, 'includes:maintain_timestamps'
+    assert_includes output, 'Successfully updated timestamps'
+    assert_includes output, 'Task completed: includes:maintain_timestamps'
+  end
+
+  def test_maintain_all_runs_both_tasks_in_sequence
+    create_test_file('help/doc.md', <<~MARKDOWN)
+      ---
+      title: Doc
+      ---
+
+      {{$include /help/_includes/note.md}}
+    MARKDOWN
+    create_test_file('help/_includes/note.md', 'A note.')
+
+    output = run_task_in_workspace('includes:maintain_all')
+
+    assert_includes output, 'includes:maintain_relationships'
+    assert_includes output, 'includes:maintain_timestamps'
+    assert_includes output, 'All include management tasks completed successfully'
+    assert_includes output, 'Task completed: includes:maintain_all'
+
+    relationships_file = File.join(TEMP_DIR, 'rakelib', 'include-relationships.yml')
+    assert File.exist?(relationships_file), 'include-relationships.yml should be created'
+  end
 end
 # rubocop:enable Metrics/ClassLength, Metrics/MethodLength
