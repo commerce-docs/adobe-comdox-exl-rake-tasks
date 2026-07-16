@@ -79,11 +79,33 @@ bundle exec rake images:optimize
 # Find unused images
 bundle exec rake images:unused
 
-# Convert SVG images to PNG (requires ImageMagick installed)
+# Convert SVG images to PNG - path may be a directory or a single file
 bundle exec rake images:svg_to_png path=help/assets
+bundle exec rake images:svg_to_png path=help/assets/diagram.svg
 
 # Check SVG images against the 140 KB size limit for ExL
 bundle exec rake images:check_size path=help/assets
+```
+
+`images:svg_to_png` picks a converter automatically and keeps the original SVG:
+
+- **librsvg** (`rsvg-convert`) is preferred when installed - it resolves named
+  fonts more reliably than ImageMagick's built-in SVG renderer.
+- **ImageMagick** (`magick`/`convert`) is used as a fallback.
+- **Google Chrome or Chromium** is used automatically for SVGs exported from
+  draw.io/diagrams.net that embed rich text via `<foreignObject>` (neither
+  librsvg nor ImageMagick render `foreignObject`, so they'd otherwise fall
+  back to a truncated placeholder). If no Chromium-based browser is found,
+  the task warns and falls back to librsvg/ImageMagick anyway.
+
+Install at least one converter:
+
+```bash
+# macOS
+brew install librsvg imagemagick
+
+# Debian/Ubuntu
+apt-get install librsvg2-bin imagemagick
 ```
 
 ### Utility Tasks

@@ -321,8 +321,12 @@ class ImagesTasksIntegrationTest < Minitest::Test
     SVG
     ENV['path'] = File.join(TEMP_DIR, 'help/assets/diagram.svg')
 
+    # Stub svg_conversion_available? too so the task-level gate passes regardless of which
+    # (if any) SVG conversion tools are actually installed in the environment running this test.
     output = ImageTasksHelper.stub(:chrome_available?, false) do
-      run_task_in_workspace('images:svg_to_png')
+      ImageTasksHelper.stub(:svg_conversion_available?, true) do
+        run_task_in_workspace('images:svg_to_png')
+      end
     end
 
     assert_includes output, 'embeds HTML content'

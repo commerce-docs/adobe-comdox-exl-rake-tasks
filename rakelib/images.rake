@@ -134,13 +134,20 @@ module ImageTasksHelper
 
   def self.convert_svg_to_png(svg)
     png = svg.sub(/\.svg\z/i, '.png')
-    return convert_with_chrome(svg, png) if foreign_object_svg?(svg) && chrome_available?
 
-    warn_missing_chrome(svg) if foreign_object_svg?(svg)
+    if foreign_object_svg?(svg)
+      return convert_with_chrome(svg, png) if chrome_available?
+
+      warn_missing_chrome(svg)
+    end
 
     # Prefer rsvg-convert: ImageMagick's built-in SVG renderer takes priority over its
     # rsvg-convert delegate on many builds and fails to resolve named fonts in SVG text.
-    rsvg_convert_available? ? convert_with_rsvg(svg, png) : convert_with_imagemagick(svg, png)
+    return convert_with_rsvg(svg, png) if rsvg_convert_available?
+    return convert_with_imagemagick(svg, png) if imagemagick_available?
+    return convert_with_chrome(svg, png) if chrome_available?
+
+    puts "Failed to convert #{svg}: no SVG conversion tool is available".red
   end
 
   def self.warn_missing_chrome(svg)
