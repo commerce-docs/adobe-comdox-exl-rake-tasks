@@ -186,10 +186,10 @@ module IncludesTasksHelper
     puts 'Running task: includes:unused'.magenta
     puts 'Status: Scanning for unused include files...'.yellow
 
-    includes = FileList['../help/_includes/**/*']
+    includes = FileList['../help/_includes/**/*'].select { |f| File.file?(f) }
     puts "Status: Found #{includes.size} include files to check".yellow
 
-    includes.exclude('../help/_includes/snippets.md')
+    includes = includes.reject { |f| f == '../help/_includes/snippets.md' }
     filter_used_includes(includes)
     report_unused_includes(includes)
 
@@ -202,8 +202,8 @@ module IncludesTasksHelper
 
       content = File.read(file)
       includes.delete_if do |include|
-        basename = Regexp.escape(File.basename(include))
-        content.match?(/\{\{\$include\s+[^}]*#{basename}\}\}/)
+        include_relative = Regexp.escape(include.sub('../help/_includes/', ''))
+        content.match?(/\{\{\$include\s+[^}]*#{include_relative}\}\}/)
       end
     end
   end

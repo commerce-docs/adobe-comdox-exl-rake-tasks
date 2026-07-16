@@ -42,7 +42,7 @@ module ImageTasksHelper
 
   def self.image_linked?(content, basename)
     escaped = Regexp.escape(basename)
-    content.match?(/!\[[^\]]*\]\([^)]*#{escaped}[^)]*\)/) ||
+    content.match?(/!\[.*?\]\([^)]*#{escaped}[^)]*\)/) ||
       content.match?(/<img\s+[^>]*src=["'][^"']*#{escaped}["']/)
   end
 

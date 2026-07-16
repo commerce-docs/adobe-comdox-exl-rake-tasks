@@ -224,6 +224,52 @@ class IncludesTasksIntegrationTest < Minitest::Test
     assert_includes output, 'Task completed: includes:maintain_timestamps'
   end
 
+  def test_unused_includes_excludes_directories
+    # A nested directory under help/_includes whose files are never referenced.
+    create_test_file('help/_includes/release-notes/highlights/security.md', <<~MARKDOWN)
+      This include is not used anywhere.
+    MARKDOWN
+
+    create_test_file('help/main.md', <<~MARKDOWN)
+      ---
+      title: Main
+      ---
+
+      Just regular content, no includes.
+    MARKDOWN
+
+    output = run_task_in_workspace('includes:unused')
+
+    # Only the file itself is a candidate -- the 2 containing directories
+    # (release-notes, release-notes/highlights) must be filtered out up front.
+    assert_includes output, 'Status: Found 1 include files to check'
+    # The unused file itself should be reported...
+    assert_includes output, 'security.md'
+    # ...and it should be the only entry reported as unused.
+    assert_includes output, 'Status: 1 unlinked includes detected'
+  end
+
+  def test_unused_includes_handles_duplicate_basenames_in_different_directories
+    # Two include files with the same basename in different directories.
+    create_test_file('help/_includes/a/notes.md', 'Notes A')
+    create_test_file('help/_includes/b/notes.md', 'Notes B')
+
+    # Only the one in `a/` is referenced.
+    create_test_file('help/main.md', <<~MARKDOWN)
+      ---
+      title: Main
+      ---
+
+      {{$include /help/_includes/a/notes.md}}
+    MARKDOWN
+
+    output = run_task_in_workspace('includes:unused')
+
+    # Only the unreferenced b/notes.md should be reported as unused.
+    assert_includes output, 'b/notes.md'
+    refute_includes output, 'a/notes.md'
+  end
+
   def test_maintain_all_runs_both_tasks_in_sequence
     create_test_file('help/doc.md', <<~MARKDOWN)
       ---

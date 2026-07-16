@@ -12,7 +12,7 @@ GIT
 PATH
   remote: .
   specs:
-    adobe-comdox-exl-rake-tasks (0.4.0)
+    adobe-comdox-exl-rake-tasks (0.4.1)
       colorator (~> 1.1)
       date (~> 3.3)
       image_optim (~> 0.31)

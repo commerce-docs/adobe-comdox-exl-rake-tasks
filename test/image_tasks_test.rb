@@ -55,4 +55,24 @@ class ImageTasksTest < Minitest::Test
     tasks = AdobeComdoxExlRakeTasks::ImageTasks.available_tasks
     assert_equal 4, tasks.size
   end
+
+  def test_image_linked_with_dnl_tag_in_alt_text
+    content = '![[!DNL RabbitMQ] node status](../../assets/tools/rabbitmq-tab-4.jpeg)'
+    assert ImageTasksHelper.image_linked?(content, 'rabbitmq-tab-4.jpeg')
+  end
+
+  def test_image_linked_with_uicontrol_tag_in_alt_text
+    content = '![Click [!UICONTROL Save]](../assets/save-button.png)'
+    assert ImageTasksHelper.image_linked?(content, 'save-button.png')
+  end
+
+  def test_image_linked_with_dnl_tag_mid_alt_text
+    content = '![Simple [!DNL Varnish] Configuration](../assets/single-varnish.png)'
+    assert ImageTasksHelper.image_linked?(content, 'single-varnish.png')
+  end
+
+  def test_image_linked_returns_false_when_basename_absent
+    content = '![Simple [!DNL Varnish] Configuration](../assets/single-varnish.png)'
+    refute ImageTasksHelper.image_linked?(content, 'other-image.png')
+  end
 end
