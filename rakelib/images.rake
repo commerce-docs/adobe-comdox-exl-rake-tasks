@@ -247,9 +247,9 @@ namespace :images do
     next puts 'No SVG images found.'.magenta if svgs.empty?
 
     unless ImageTasksHelper.svg_conversion_available?
-      puts 'ImageMagick or librsvg (rsvg-convert) is required to convert SVGs to PNG.'.red
-      puts 'Install with "brew install imagemagick librsvg" (macOS) or ' \
-           '"apt-get install imagemagick librsvg2-bin" (Debian/Ubuntu).'.yellow
+      puts 'librsvg, ImageMagick, or Google Chrome/Chromium is required to convert SVGs to PNG.'.red
+      puts 'Install with "brew install librsvg imagemagick" (macOS) or ' \
+           '"apt-get install librsvg2-bin imagemagick" (Debian/Ubuntu), or install Google Chrome.'.yellow
       next
     end
 
