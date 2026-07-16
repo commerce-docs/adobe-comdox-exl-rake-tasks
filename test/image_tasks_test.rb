@@ -75,4 +75,46 @@ class ImageTasksTest < Minitest::Test
     content = '![Simple [!DNL Varnish] Configuration](../assets/single-varnish.png)'
     refute ImageTasksHelper.image_linked?(content, 'other-image.png')
   end
+
+  def test_svg_png_counterpart_used_when_png_sibling_is_linked
+    Dir.mktmpdir do |dir|
+      svg = File.join(dir, 'diagram.svg')
+      File.write(File.join(dir, 'diagram.png'), 'fake png content')
+      File.write(svg, 'fake svg content')
+
+      contents = ['![Diagram](assets/diagram.png)']
+      assert ImageTasksHelper.svg_png_counterpart_used?(svg, contents)
+    end
+  end
+
+  def test_svg_png_counterpart_used_returns_false_without_png_sibling
+    Dir.mktmpdir do |dir|
+      svg = File.join(dir, 'diagram.svg')
+      File.write(svg, 'fake svg content')
+
+      contents = ['![Diagram](assets/diagram.png)']
+      refute ImageTasksHelper.svg_png_counterpart_used?(svg, contents)
+    end
+  end
+
+  def test_svg_png_counterpart_used_returns_false_when_png_sibling_unused
+    Dir.mktmpdir do |dir|
+      svg = File.join(dir, 'diagram.svg')
+      File.write(File.join(dir, 'diagram.png'), 'fake png content')
+      File.write(svg, 'fake svg content')
+
+      contents = ['Just text content, no images.']
+      refute ImageTasksHelper.svg_png_counterpart_used?(svg, contents)
+    end
+  end
+
+  def test_svg_png_counterpart_used_returns_false_for_non_svg_image
+    Dir.mktmpdir do |dir|
+      png = File.join(dir, 'diagram.png')
+      File.write(png, 'fake png content')
+
+      contents = ['![Diagram](assets/diagram.png)']
+      refute ImageTasksHelper.svg_png_counterpart_used?(png, contents)
+    end
+  end
 end
