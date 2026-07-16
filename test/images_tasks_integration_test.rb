@@ -240,6 +240,24 @@ class ImagesTasksIntegrationTest < Minitest::Test
     ENV.delete('path')
   end
 
+  def test_svg_to_png_with_path_to_single_file
+    skip 'ImageMagick is not installed' unless ImageTasksHelper.imagemagick_available?
+
+    create_test_file('help/assets/icon.svg', <<~SVG)
+      <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10">
+        <rect width="10" height="10" fill="red"/>
+      </svg>
+    SVG
+    ENV['path'] = File.join(TEMP_DIR, 'help/assets/icon.svg')
+
+    output = run_task_in_workspace('images:svg_to_png')
+
+    assert_includes output, 'Converted'
+    assert file_exists?('help/assets/icon.png')
+  ensure
+    ENV.delete('path')
+  end
+
   def test_svg_to_png_reports_missing_imagemagick
     create_test_file('help/assets/icon.svg', '<svg></svg>')
     ENV['path'] = File.join(TEMP_DIR, 'help/assets')
@@ -295,6 +313,17 @@ class ImagesTasksIntegrationTest < Minitest::Test
   def test_check_size_reports_svgs_within_limit
     create_test_file('help/assets/icon.svg', '<svg></svg>')
     ENV['path'] = File.join(TEMP_DIR, 'help/assets')
+
+    output = run_task_in_workspace('images:check_size')
+
+    assert_includes output, 'within the 140 KB size limit'
+  ensure
+    ENV.delete('path')
+  end
+
+  def test_check_size_with_path_to_single_file
+    create_test_file('help/assets/icon.svg', '<svg></svg>')
+    ENV['path'] = File.join(TEMP_DIR, 'help/assets/icon.svg')
 
     output = run_task_in_workspace('images:check_size')
 

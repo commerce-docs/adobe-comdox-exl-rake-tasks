@@ -60,6 +60,12 @@ module ImageTasksHelper
     system('command -v magick > /dev/null 2>&1') || system('command -v convert > /dev/null 2>&1')
   end
 
+  def self.svgs_for_path(path)
+    return [path] if File.file?(path)
+
+    Dir["#{path}/**/*.svg"]
+  end
+
   def self.oversized_svgs(svgs, limit_bytes = SVG_SIZE_LIMIT_BYTES)
     svgs.select { |svg| File.size(svg) > limit_bytes }
   end
@@ -137,7 +143,7 @@ namespace :images do
       next
     end
 
-    svgs = Dir["#{path}/**/*.svg"]
+    svgs = ImageTasksHelper.svgs_for_path(path)
     next puts 'No SVG images found.'.magenta if svgs.empty?
 
     unless ImageTasksHelper.imagemagick_available?
@@ -158,7 +164,7 @@ namespace :images do
       next
     end
 
-    svgs = Dir["#{path}/**/*.svg"]
+    svgs = ImageTasksHelper.svgs_for_path(path)
     next puts 'No SVG images found.'.magenta if svgs.empty?
 
     oversized = ImageTasksHelper.oversized_svgs(svgs)
