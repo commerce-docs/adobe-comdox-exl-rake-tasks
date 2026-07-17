@@ -42,8 +42,28 @@ module ImageTasksHelper
 
   def self.image_linked?(content, basename)
     escaped = Regexp.escape(basename)
-    content.match?(/!\[[^\]]*\]\([^)]*#{escaped}[^)]*\)/) ||
+    content.match?(/!\[.*?\]\([^)]*#{escaped}[^)]*\)/) ||
       content.match?(/<img\s+[^>]*src=["'][^"']*#{escaped}["']/)
+  end
+
+  # images:svg_to_png keeps the source SVG alongside its rendered PNG, and either one may be
+  # the one actually referenced in Markdown. So an SVG whose own filename isn't linked should
+  # still be treated as used if a same-named PNG sibling is linked instead.
+  def self.svg_png_counterpart_used?(image, contents)
+    return false unless File.extname(image).casecmp('.svg').zero?
+
+    png_counterpart = image.sub(/\.svg\z/i, '.png')
+    return false unless File.exist?(png_counterpart)
+
+    basename = File.basename(png_counterpart)
+    contents.any? { |content| image_linked?(content, basename) }
+  end
+
+  def self.filter_used_images(images)
+    contents = Dir['../help/**/*.md'].reject { |f| File.symlink?(f) }.map { |f| File.read(f) }
+
+    images.delete_if { |img| contents.any? { |content| image_linked?(content, File.basename(img)) } }
+    images.delete_if { |img| svg_png_counterpart_used?(img, contents) }
   end
 
   def self.report_unused_images(images)
@@ -223,12 +243,7 @@ namespace :images do
     puts "The project contains a total of #{images.size} images."
 
     puts 'Checking for unlinked images...'
-    Dir['../help/**/*.{md}'].each do |file|
-      next if File.symlink?(file)
-
-      content = File.read(file)
-      images.delete_if { |img| ImageTasksHelper.image_linked?(content, File.basename(img)) }
-    end
+    ImageTasksHelper.filter_used_images(images)
 
     ImageTasksHelper.report_unused_images(images)
   end

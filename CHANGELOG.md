@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.1] - 2026-07-16
+
+### Fixed
+
+- **`images:unused`** - Images whose Markdown alt text contains a nested `[...]` span (e.g. ExL's `[!DNL Term]` / `[!UICONTROL Term]` localization tags) were incorrectly reported as unused, since the alt-text portion of the linked-image regex stopped at the first `]` instead of the one closing the alt text itself
+- **`includes:unused`** - Directories under `help/_includes/` were incorrectly reported as unused includes; only files can be referenced by `{{$include ...}}` syntax, so directories are now excluded from the candidate list
+- **`includes:unused`** - Include files were matched by basename only, so two include files sharing a basename in different directories (e.g. `_includes/a/notes.md` and `_includes/b/notes.md`) could cause both to be classified as used when only one was referenced; matching is now anchored to the full `{{$include /help/_includes/<path>}}` syntax, so it requires an exact path match instead of a substring one (a shorter path like `a/notes.md` is no longer satisfied by a longer one that merely ends with it, e.g. `sub/a/notes.md`)
+- **`images:unused`** - `images:svg_to_png` keeps the source SVG alongside its rendered PNG, and either file may be the one actually referenced in Markdown. An SVG was reported as unused whenever only its PNG counterpart was linked; it's now also considered used if a same-named PNG sibling is linked
+
 ## [0.4.0] - 2026-07-16
 
 ### Added

@@ -123,6 +123,45 @@ class ImagesTasksIntegrationTest < Minitest::Test
     assert_includes output, 'total of 0 images'
   end
 
+  def test_unused_images_excludes_svg_with_used_png_counterpart
+    # images:svg_to_png keeps the source SVG alongside its rendered PNG; only the
+    # PNG is referenced in Markdown, so the SVG's own filename is never linked.
+    create_test_file('help/assets/diagram.svg', 'fake svg content')
+    create_test_file('help/assets/diagram.png', 'fake png content')
+    create_test_file('help/doc.md', <<~MARKDOWN)
+      ---
+      title: Document
+      ---
+
+      ![Diagram](assets/diagram.png)
+    MARKDOWN
+
+    output = run_task_in_workspace('images:unused')
+
+    # Neither the PNG (directly linked) nor the SVG (used PNG sibling) should be reported
+    refute_includes output, 'No links for'
+    assert_includes output, 'No unlinked images'
+  end
+
+  def test_unused_images_reports_svg_with_unused_png_counterpart
+    # The PNG sibling exists but isn't referenced anywhere, so both should still be
+    # reported as unused.
+    create_test_file('help/assets/orphan.svg', 'fake svg content')
+    create_test_file('help/assets/orphan.png', 'fake png content')
+    create_test_file('help/doc.md', <<~MARKDOWN)
+      ---
+      title: Document
+      ---
+
+      Just text content, no images.
+    MARKDOWN
+
+    output = run_task_in_workspace('images:unused')
+
+    assert_includes output, 'orphan.svg'
+    assert_includes output, 'orphan.png'
+  end
+
   def test_optimize_with_no_path_checks_uncommitted
     # This task looks for git-modified files
     # In a fresh test workspace, there are no uncommitted files
