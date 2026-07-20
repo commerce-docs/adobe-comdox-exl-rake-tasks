@@ -25,6 +25,7 @@
 *.swo
 .cursor/
 .scout/
+.claude/
 
 # OS
 .DS_Store

@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.2] - 2026-07-20
+
+### Fixed
+
+- **`images:optimize`** - Removed the automatic `images:check_size` invocation added in 0.4.0; it never actually enforced the size limit, so the dead call is removed rather than fixed. Run `images:check_size` explicitly to check the 140 KB SVG size limit
+
 ## [0.4.1] - 2026-07-16
 
 ### Fixed

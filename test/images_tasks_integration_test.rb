@@ -171,28 +171,6 @@ class ImagesTasksIntegrationTest < Minitest::Test
     assert_includes output, 'Checking images'
   end
 
-  def test_optimize_with_path_containing_svg_runs_check_size
-    create_test_file('help/assets/icon.svg', '<svg></svg>')
-    ENV['path'] = File.join(TEMP_DIR, 'help/assets')
-
-    output = run_task_in_workspace('images:optimize')
-
-    assert_includes output, 'within the 140 KB size limit'
-  ensure
-    ENV.delete('path')
-  end
-
-  def test_optimize_with_path_without_svg_skips_check_size
-    create_test_file('help/assets/pic.png', 'fake png content')
-    ENV['path'] = File.join(TEMP_DIR, 'help/assets')
-
-    output = run_task_in_workspace('images:optimize')
-
-    refute_includes output, 'size limit'
-  ensure
-    ENV.delete('path')
-  end
-
   def test_image_with_empty_alt_text_counts_as_used
     # ExL supports ![](image.png) syntax (empty alt text)
     create_test_file('help/assets/diagram.png', 'fake png content')

@@ -227,11 +227,6 @@ namespace :images do
     end
 
     ENV['path'] = path
-    if Dir["#{path}/**/*.svg"].any?
-      check_size_task = Rake::Task['images:check_size']
-      check_size_task.reenable
-      check_size_task.invoke
-    end
 
     system "bundle exec image_optim --recursive --no-svgo #{path}"
   end
