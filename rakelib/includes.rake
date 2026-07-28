@@ -42,6 +42,14 @@ module IncludesTasksHelper
   GIT_ROOT = '..'
   LAST_UPDATE_KEY = /\Alast-update\s*:/
   HTML_COMMENT = /<!--[\s\S]*?-->/
+  # ExL include directive: {{$include /help/_includes/...}}. The target path may contain
+  # spaces or shell metacharacters, so capture everything up to the closing braces.
+  INCLUDE_DIRECTIVE = /\{\{\$include\s+([^}]+?)\}\}/
+  # Terminates expansion of a pathological or cyclic include graph.
+  MAX_INCLUDE_DEPTH = 10
+  # The branch whose history represents what readers see. last-update reflects when a
+  # topic's rendered output last changed here, regardless of the branch the task runs on.
+  PRODUCTION_REF = 'main'
 
   def self.current_timestamp
     TZInfo::Timezone.get('America/Chicago').now.strftime('%Y-%m-%d %H:%M:%S %Z')
@@ -239,7 +247,7 @@ module IncludesTasksHelper
 
   def self.process_metadata_updates(relationships)
     ensure_topics_have_front_matter(relationships)
-    relationships['relationships'].count { |main_file, includes| update_metadata_for(main_file, includes) }
+    relationships['relationships'].count { |main_file, _includes| update_metadata_for(main_file) }
   end
 
   # Validates every existing topic up front and raises before any file is written, so a
@@ -259,19 +267,14 @@ module IncludesTasksHelper
   end
 
   # Returns the date written (truthy) when the file was updated, or nil when skipped.
-  def self.update_metadata_for(main_file, includes)
+  def self.update_metadata_for(main_file)
     main_rel = "help/#{main_file}"
     return unless File.exist?("#{GIT_ROOT}/#{main_rel}")
 
-    include_rels = includes.map { |include_path| include_path.sub(%r{\A/}, '') }
-    latest = latest_visible_commit_date(main_rel, include_rels)
+    latest = rendered_change_date(main_rel)
     return unless latest
 
     write_last_update("#{GIT_ROOT}/#{main_rel}", latest.strftime('%Y-%m-%d'))
-  end
-
-  def self.latest_visible_commit_date(main_rel, include_rels)
-    [main_rel, *include_rels].filter_map { |rel| visible_commit_date(rel) }.max
   end
 
   # Runs git from the repo root with argv (no shell), so paths and refs containing shell
@@ -281,27 +284,81 @@ module IncludesTasksHelper
     IO.popen(['git', '-C', GIT_ROOT, *args], err: File::NULL, &:read)
   end
 
-  # Date of the newest commit that changed user-visible content. Commits that only
-  # touch front matter or HTML comments are skipped, so writing the last-update key
-  # itself is never treated as a topic update.
-  def self.visible_commit_date(rel_path)
-    shas = git_capture('log', '--format=%H', '--', rel_path).split("\n")
-    sha = shas.find { |candidate| visible_content_changed?(candidate, rel_path) }
+  # Date the topic's reader-facing rendered output last changed on PRODUCTION_REF. The
+  # walk follows that branch's first-parent history, so each step is a publish to
+  # production rather than a feature branch's own integration merges, and is scoped to the
+  # topic plus the includes it composes. It returns the newest publish whose expanded,
+  # normalized body differs from the state just before it; edits that only touch front
+  # matter or HTML comments, or that merely move already-published prose into an include
+  # without changing what renders, never advance the date. nil when the topic is not yet
+  # on PRODUCTION_REF (nothing has been published to readers).
+  def self.rendered_change_date(main_rel)
+    paths = contributing_paths(main_rel)
+    shas = git_capture('log', '--first-parent', '--format=%H', PRODUCTION_REF, '--', *paths).split("\n")
+    sha = shas.find { |candidate| rendered_content_changed?(candidate, main_rel) }
     sha && commit_author_date(sha)
   end
 
-  def self.visible_content_changed?(sha, rel_path)
-    visible_body_at(sha, rel_path) != visible_body_at("#{sha}^", rel_path)
+  # The topic plus the transitive set of include files it composes on PRODUCTION_REF.
+  # Scoping the history walk to these paths lets an include-only edit still count as a
+  # topic change.
+  def self.contributing_paths(main_rel)
+    paths = []
+    queue = [main_rel]
+    until queue.empty?
+      current = queue.shift
+      next if paths.include?(current)
+
+      paths << current
+      queue.concat(production_include_refs(current))
+    end
+    paths
   end
 
-  # Content at a git ref with front matter and HTML comments removed and whitespace
-  # collapsed, leaving only what an end user would see. nil when the file is absent.
-  def self.visible_body_at(ref, rel_path)
-    content = git_capture('show', "#{ref}:#{rel_path}")
+  # Include paths referenced directly by a file's content on PRODUCTION_REF; [] if absent.
+  def self.production_include_refs(rel)
+    raw = git_capture('show', "#{PRODUCTION_REF}:#{rel}")
+    return [] unless $CHILD_STATUS.success?
+
+    raw.scan(INCLUDE_DIRECTIVE).map { |match| include_rel(match.first) }
+  end
+
+  def self.rendered_content_changed?(sha, main_rel)
+    rendered_body_at(sha, main_rel) != rendered_body_at("#{sha}^", main_rel)
+  end
+
+  # Reader-facing body at a git ref: front matter and HTML comments removed, {{$include}}
+  # directives expanded (recursively) to the referenced file's rendered body at the same
+  # ref, and whitespace collapsed. nil when the topic itself is absent at the ref.
+  def self.rendered_body_at(ref, main_rel)
+    raw = git_capture('show', "#{ref}:#{main_rel}")
     return nil unless $CHILD_STATUS.success?
 
-    _front_matter, body = split_front_matter(content)
-    body.gsub(HTML_COMMENT, '').gsub(/\s+/, ' ').strip
+    _front_matter, body = split_front_matter(raw)
+    expand_includes(ref, body, [main_rel]).gsub(HTML_COMMENT, '').gsub(/\s+/, ' ').strip
+  end
+
+  # Recursively replaces each {{$include ...}} directive with the referenced file's body
+  # at the given ref. A missing include is left untouched; already-visited paths and a
+  # depth ceiling keep a cyclic include graph from looping forever.
+  def self.expand_includes(ref, text, seen, depth = 0)
+    return text if depth > MAX_INCLUDE_DEPTH
+
+    text.gsub(INCLUDE_DIRECTIVE) do |directive|
+      rel = include_rel(Regexp.last_match(1))
+      next '' if seen.include?(rel)
+
+      raw = git_capture('show', "#{ref}:#{rel}")
+      next directive unless $CHILD_STATUS.success?
+
+      _front_matter, body = split_front_matter(raw)
+      expand_includes(ref, body, seen + [rel], depth + 1)
+    end
+  end
+
+  # Turns an include directive's target (/help/_includes/foo.md) into a repo-relative path.
+  def self.include_rel(directive_path)
+    directive_path.strip.sub(%r{\A/}, '')
   end
 
   def self.commit_author_date(sha)
@@ -376,9 +433,10 @@ namespace :includes do
     IncludesTasksHelper.maintain_timestamps
   end
 
-  desc 'Add/update the last-update front matter metadata for topics with includes, using the git ' \
-       'history of each topic and its includes (whichever is more recent). Commits that only touch ' \
-       'front matter or HTML comments are ignored, since they are invisible to end users.'
+  desc 'Add/update the last-update front matter metadata for topics with includes. The date is when ' \
+       "the topic's reader-facing rendered output (its body with includes expanded) last changed on " \
+       'the production first-parent history. Changes that only touch front matter or HTML comments, ' \
+       'or that merely move already-published prose into an include, are ignored as invisible to end users.'
   task maintain_metadata_timestamps: :maintain_relationships do
     IncludesTasksHelper.maintain_metadata_timestamps
   end

@@ -458,7 +458,102 @@ class IncludesTasksIntegrationTest < Minitest::Test
     refute_includes read_test_file('help/aaa.md'), 'last-update:'
   end
 
+  def test_metadata_timestamp_ignores_move_to_include_that_does_not_change_rendered_output
+    # Inline prose is relocated verbatim into an include on a feature branch and merged to
+    # main. Readers see an identical rendered page, so the publish must not advance
+    # last-update past the date the prose was actually authored.
+    create_test_file('help/topic.md', topic_with_body('The quick brown fox jumps over the lazy dog.'))
+    init_git_repo
+    git_commit_all('Author inline prose', '2026-01-10T12:00:00')
+
+    git_checkout('feat', create: true)
+    create_test_file('help/_includes/fox.md', "The quick brown fox jumps over the lazy dog.\n")
+    create_test_file('help/topic.md', topic_with_body('{{$include /help/_includes/fox.md}}'))
+    git_commit_all('Move prose into an include', '2026-02-20T12:00:00')
+
+    git_checkout('main')
+    git_merge('feat', 'Merge PR: move prose to include', '2026-02-25T12:00:00')
+
+    run_task_in_workspace('includes:maintain_metadata_timestamps')
+
+    body = read_test_file('help/topic.md')
+    assert_includes body, 'last-update: 2026-01-10'
+    refute_includes body, 'last-update: 2026-02-25'
+  end
+
+  def test_metadata_timestamp_advances_to_publish_when_move_to_include_changes_rendered_output
+    # Same move-to-include, but the include adds a heading the page never had, so the
+    # rendered output genuinely changes. The date must advance to the production publish
+    # (the merge to main) -- not the original prose date, and not the feature-branch commit.
+    create_test_file('help/topic.md', topic_with_body('The quick brown fox jumps over the lazy dog.'))
+    init_git_repo
+    git_commit_all('Author inline prose', '2026-01-10T12:00:00')
+
+    git_checkout('feat', create: true)
+    create_test_file('help/_includes/fox.md', "## Reference\n\nThe quick brown fox jumps over the lazy dog.\n")
+    create_test_file('help/topic.md', topic_with_body('{{$include /help/_includes/fox.md}}'))
+    git_commit_all('Move prose into an include and add a heading', '2026-02-20T12:00:00')
+
+    git_checkout('main')
+    git_merge('feat', 'Merge PR: move prose to include', '2026-02-25T12:00:00')
+
+    run_task_in_workspace('includes:maintain_metadata_timestamps')
+
+    assert_includes read_test_file('help/topic.md'), 'last-update: 2026-02-25'
+  end
+
+  def test_metadata_timestamp_follows_nested_includes
+    # topic -> outer include -> inner include. Editing the innermost include changes the
+    # topic's rendered output and must advance last-update, even though the topic never
+    # references the inner include directly (so the relationships index does not list it).
+    create_test_file('help/topic.md', topic_with_body('{{$include /help/_includes/outer.md}}'))
+    create_test_file('help/_includes/outer.md', "Outer intro.\n\n{{$include /help/_includes/inner.md}}\n")
+    create_test_file('help/_includes/inner.md', "Original inner text.\n")
+    init_git_repo
+    git_commit_all('Add topic with nested includes', '2026-01-10T12:00:00')
+
+    create_test_file('help/_includes/inner.md', "Revised inner text.\n")
+    git_commit_all('Edit the innermost include', '2026-05-01T12:00:00')
+
+    run_task_in_workspace('includes:maintain_metadata_timestamps')
+
+    assert_includes read_test_file('help/topic.md'), 'last-update: 2026-05-01'
+  end
+
+  def test_metadata_timestamp_reflects_production_branch_not_the_checked_out_branch
+    # last-update tracks what readers see on main. An unmerged edit on the branch the task
+    # happens to run from must not leak into the date, even though that edit is what gets
+    # written to disk.
+    create_test_file('help/topic.md', topic_with_body('{{$include /help/_includes/note.md}}'))
+    create_test_file('help/_includes/note.md', "A note.\n")
+    init_git_repo
+    git_commit_all('Publish topic', '2026-01-10T12:00:00')
+
+    git_checkout('feat', create: true)
+    create_test_file('help/_includes/note.md', "A substantially rewritten note.\n")
+    git_commit_all('Unpublished rewrite on a feature branch', '2026-06-01T12:00:00')
+
+    run_task_in_workspace('includes:maintain_metadata_timestamps')
+
+    body = read_test_file('help/topic.md')
+    assert_includes body, 'last-update: 2026-01-10'
+    refute_includes body, 'last-update: 2026-06-01'
+  end
+
   private
+
+  # A topic with front matter wrapping a single body line (prose or an include directive).
+  def topic_with_body(body)
+    <<~MARKDOWN
+      ---
+      title: Topic
+      ---
+
+      # Topic
+
+      #{body}
+    MARKDOWN
+  end
 
   # A topic that references one include, plus the include itself.
   def write_topic_with_include
@@ -482,6 +577,9 @@ class IncludesTasksIntegrationTest < Minitest::Test
 
   def init_git_repo
     run_git('init', '-q', TEMP_DIR)
+    # Pin the default branch so merge-based tests can check out 'main' deterministically,
+    # regardless of the host git's init.defaultBranch setting.
+    run_git('-C', TEMP_DIR, 'symbolic-ref', 'HEAD', 'refs/heads/main')
     run_git('-C', TEMP_DIR, 'config', 'user.email', 'test@example.com')
     run_git('-C', TEMP_DIR, 'config', 'user.name', 'Test')
     run_git('-C', TEMP_DIR, 'config', 'commit.gpgsign', 'false')
@@ -492,6 +590,20 @@ class IncludesTasksIntegrationTest < Minitest::Test
     run_git('-C', TEMP_DIR, 'add', '-A')
     env = { 'GIT_AUTHOR_DATE' => iso_date, 'GIT_COMMITTER_DATE' => iso_date }
     system(env, 'git', '-C', TEMP_DIR, 'commit', '-q', '-m', message, out: File::NULL, err: File::NULL)
+  end
+
+  def git_checkout(branch, create: false)
+    args = ['-C', TEMP_DIR, 'checkout', '-q']
+    args << '-b' if create
+    run_git(*args, branch)
+  end
+
+  # Merges branch into the current branch with a real merge commit (no fast-forward),
+  # mirroring how a PR lands on the mainline.
+  def git_merge(branch, message, iso_date)
+    env = { 'GIT_AUTHOR_DATE' => iso_date, 'GIT_COMMITTER_DATE' => iso_date }
+    system(env, 'git', '-C', TEMP_DIR, 'merge', '-q', '--no-ff', '-m', message, branch,
+           out: File::NULL, err: File::NULL)
   end
 
   def run_git(*)
