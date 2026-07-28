@@ -228,7 +228,14 @@ namespace :images do
 
     ENV['path'] = path
 
-    system "bundle exec image_optim --recursive --no-svgo #{path}"
+    # Pass each path as its own argv entry (no shell involved) so filenames containing shell
+    # metacharacters (quotes, globs, `$`, `;`, etc.) are never re-interpreted by a shell.
+    # Paths are split on whitespace, so file names must not contain spaces.
+    success = system('bundle', 'exec', 'image_optim', '--recursive', '--no-svgo', *path.split)
+    unless success
+      raise "Image optimization failed for: #{path}. " \
+            'Verify each file exists and that file names contain no spaces.'
+    end
   end
 
   desc 'Find unused images.'

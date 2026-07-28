@@ -171,6 +171,35 @@ class ImagesTasksIntegrationTest < Minitest::Test
     assert_includes output, 'Checking images'
   end
 
+  def test_optimize_raises_when_image_optim_fails
+    # A path to a nonexistent file makes image_optim exit non-zero, reliably exercising the
+    # failure path (the task invokes image_optim via argv, not a shell, so there's no
+    # metacharacter trick available to force failure independent of image_optim's own logic).
+    ENV['path'] = File.join(TEMP_DIR, 'help/assets/does-not-exist.png')
+
+    output = run_task_in_workspace('images:optimize')
+
+    assert_includes output, 'Image optimization failed for:'
+    assert_includes output, 'file names contain no spaces'
+  ensure
+    ENV.delete('path')
+  end
+
+  def test_optimize_does_not_shell_out_for_paths_with_metacharacters
+    # A path containing shell metacharacters must be passed to image_optim as a literal argv
+    # entry, never re-interpreted by a shell. If it were, this would create injected_marker.txt.
+    malicious_relative_path = 'help/assets/photo.png; touch injected_marker.txt #'
+    create_test_file(malicious_relative_path, 'fake png content')
+    ENV['path'] = File.join(TEMP_DIR, malicious_relative_path)
+
+    run_task_in_workspace('images:optimize')
+
+    assert_empty Dir.glob(File.join(TEMP_DIR, '**', 'injected_marker.txt')),
+                 'shell metacharacters in the path were executed'
+  ensure
+    ENV.delete('path')
+  end
+
   def test_image_with_empty_alt_text_counts_as_used
     # ExL supports ![](image.png) syntax (empty alt text)
     create_test_file('help/assets/diagram.png', 'fake png content')
