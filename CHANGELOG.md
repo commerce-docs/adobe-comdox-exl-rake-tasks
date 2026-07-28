@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - 2026-07-28
+
+### Added
+
+- **New task** - `includes:maintain_metadata_timestamps` - Adds/updates a `last-update` front matter key on every topic that has includes, dated from the git history of the topic and its included files (whichever changed most recently). Commits that only touch front matter or HTML comments are ignored, so they are never mistaken for a topic update — this keeps the key from advancing when the task writes itself, or when the sibling `includes:maintain_timestamps` updates its HTML comment marker. The `last-update` line is written surgically, leaving the rest of the front matter byte-for-byte intact. The task validates every topic up front and fails without writing anything if any topic has no front matter, so a run is all-or-nothing. Runs `includes:maintain_relationships` first to refresh `include-relationships.yml`
+
+### Changed
+
+- **Test suite** - Added git-backed integration tests for `includes:maintain_metadata_timestamps` covering date selection across a topic and its includes, front-matter-only and HTML-comment-only commits being ignored, idempotency, atomic failure when a topic has no front matter, and safe handling of include paths containing shell metacharacters
+
+### Fixed
+
+- **`images:optimize`** - The task ignored the exit status of the `image_optim` command it shells out to, so a failed optimization (e.g. a corrupt or unsupported image) was silently swallowed and the task still exited successfully. It now raises when `image_optim` fails — naming the offending path and its likely causes — so callers (e.g. a pre-commit hook checking `bundle exec rake images:optimize`'s exit status) can detect the failure
+- **`images:optimize`** - The task interpolated the `path` argument directly into a shell command string, so a staged filename containing shell metacharacters (quotes, `;`, `$`, glob characters, etc.) could be reinterpreted by the shell instead of treated as a literal file path. Each path is now passed as its own argument to `image_optim` with no shell involved
+
 ## [0.4.2] - 2026-07-20
 
 ### Fixed
