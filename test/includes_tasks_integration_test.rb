@@ -314,5 +314,188 @@ class IncludesTasksIntegrationTest < Minitest::Test
     relationships_file = File.join(TEMP_DIR, 'rakelib', 'include-relationships.yml')
     assert File.exist?(relationships_file), 'include-relationships.yml should be created'
   end
+
+  def test_maintain_metadata_timestamps_writes_last_update_from_git_history
+    write_topic_with_include
+    init_git_repo
+    git_commit_all('Add topic and include', '2026-01-15T12:00:00')
+
+    run_task_in_workspace('includes:maintain_metadata_timestamps')
+
+    assert_includes read_test_file('help/topic.md'), 'last-update: 2026-01-15'
+  end
+
+  def test_metadata_timestamp_ignores_front_matter_only_commit
+    write_topic_with_include
+    init_git_repo
+    git_commit_all('Initial content', '2026-01-10T12:00:00')
+
+    # A later commit that only edits front matter must NOT advance last-update.
+    create_test_file('help/topic.md', topic_body(front_matter: "title: Topic\nexl-id: abc-123"))
+    git_commit_all('Add exl-id to front matter', '2026-02-20T12:00:00')
+
+    run_task_in_workspace('includes:maintain_metadata_timestamps')
+
+    body = read_test_file('help/topic.md')
+    assert_includes body, 'last-update: 2026-01-10'
+    refute_includes body, 'last-update: 2026-02-20'
+  end
+
+  def test_metadata_timestamp_ignores_html_comment_only_commit
+    write_topic_with_include
+    init_git_repo
+    git_commit_all('Initial content', '2026-01-10T12:00:00')
+
+    # The sibling includes:maintain_timestamps task appends an HTML comment marker;
+    # such an invisible edit must not advance last-update.
+    create_test_file('help/topic.md', "#{topic_body}\n<!-- Last updated from includes: 2026-03-01 09:00:00 -->\n")
+    git_commit_all('Append include timestamp comment', '2026-03-01T12:00:00')
+
+    run_task_in_workspace('includes:maintain_metadata_timestamps')
+
+    body = read_test_file('help/topic.md')
+    assert_includes body, 'last-update: 2026-01-10'
+    refute_includes body, 'last-update: 2026-03-01'
+  end
+
+  def test_metadata_timestamp_uses_latest_of_topic_and_include
+    write_topic_with_include
+    init_git_repo
+    git_commit_all('Initial content', '2026-01-10T12:00:00')
+
+    # Only the include changes, and more recently than the topic itself.
+    create_test_file('help/_includes/note.md', 'A revised note.')
+    git_commit_all('Revise include', '2026-04-05T12:00:00')
+
+    run_task_in_workspace('includes:maintain_metadata_timestamps')
+
+    assert_includes read_test_file('help/topic.md'), 'last-update: 2026-04-05'
+  end
+
+  def test_maintain_metadata_timestamps_is_idempotent
+    write_topic_with_include
+    init_git_repo
+    git_commit_all('Add topic and include', '2026-01-15T12:00:00')
+
+    run_task_in_workspace('includes:maintain_metadata_timestamps')
+    after_first = read_test_file('help/topic.md')
+    run_task_in_workspace('includes:maintain_metadata_timestamps')
+    after_second = read_test_file('help/topic.md')
+
+    assert_equal after_first, after_second
+    assert_equal 1, after_second.scan('last-update:').size
+  end
+
+  def test_metadata_timestamp_does_not_shell_out_for_paths_with_metacharacters
+    # The include filename contains a shell command substitution. Every git call must
+    # pass paths as literal argv entries; if any interpolated it into a shell instead,
+    # this would create injected_marker.txt.
+    include_name = 'note$(touch injected_marker.txt).md'
+    create_test_file('help/topic.md', <<~MARKDOWN)
+      ---
+      title: Topic
+      ---
+
+      # Topic
+
+      Some visible prose.
+
+      {{$include /help/_includes/#{include_name}}}
+    MARKDOWN
+    create_test_file("help/_includes/#{include_name}", 'A note.')
+    init_git_repo
+    git_commit_all('Add topic and include', '2026-01-15T12:00:00')
+
+    run_task_in_workspace('includes:maintain_metadata_timestamps')
+
+    assert_empty Dir.glob(File.join(TEMP_DIR, '**', 'injected_marker.txt')),
+                 'shell metacharacters in an include path were executed'
+  end
+
+  def test_maintain_metadata_timestamps_fails_for_topic_without_front_matter
+    # A topic with includes but no front matter has nowhere to write last-update, so the
+    # task must fail loudly rather than silently skip it.
+    create_test_file('help/topic.md', <<~MARKDOWN)
+      # Topic
+
+      Some visible prose.
+
+      {{$include /help/_includes/note.md}}
+    MARKDOWN
+    create_test_file('help/_includes/note.md', 'A note.')
+    init_git_repo
+    git_commit_all('Add topic and include', '2026-01-15T12:00:00')
+
+    output = run_task_in_workspace('includes:maintain_metadata_timestamps')
+
+    assert_includes output, 'No front matter'
+  end
+
+  def test_maintain_metadata_timestamps_is_atomic_when_a_topic_lacks_front_matter
+    # aaa.md (sorted first, so processed first) has front matter; zzz.md does not. The run
+    # must fail without writing last-update to aaa.md -- it is all-or-nothing.
+    create_test_file('help/aaa.md', <<~MARKDOWN)
+      ---
+      title: Good
+      ---
+
+      # Good
+
+      {{$include /help/_includes/note.md}}
+    MARKDOWN
+    create_test_file('help/zzz.md', <<~MARKDOWN)
+      # Bad
+
+      {{$include /help/_includes/note.md}}
+    MARKDOWN
+    create_test_file('help/_includes/note.md', 'A note.')
+    init_git_repo
+    git_commit_all('Add topics and include', '2026-01-15T12:00:00')
+
+    output = run_task_in_workspace('includes:maintain_metadata_timestamps')
+
+    assert_includes output, 'No front matter'
+    refute_includes read_test_file('help/aaa.md'), 'last-update:'
+  end
+
+  private
+
+  # A topic that references one include, plus the include itself.
+  def write_topic_with_include
+    create_test_file('help/topic.md', topic_body)
+    create_test_file('help/_includes/note.md', 'A note.')
+  end
+
+  def topic_body(front_matter: 'title: Topic')
+    <<~MARKDOWN
+      ---
+      #{front_matter}
+      ---
+
+      # Topic
+
+      Some visible prose.
+
+      {{$include /help/_includes/note.md}}
+    MARKDOWN
+  end
+
+  def init_git_repo
+    run_git('init', '-q', TEMP_DIR)
+    run_git('-C', TEMP_DIR, 'config', 'user.email', 'test@example.com')
+    run_git('-C', TEMP_DIR, 'config', 'user.name', 'Test')
+    run_git('-C', TEMP_DIR, 'config', 'commit.gpgsign', 'false')
+    run_git('-C', TEMP_DIR, 'config', 'core.hooksPath', File::NULL)
+  end
+
+  def git_commit_all(message, iso_date)
+    run_git('-C', TEMP_DIR, 'add', '-A')
+    env = { 'GIT_AUTHOR_DATE' => iso_date, 'GIT_COMMITTER_DATE' => iso_date }
+    system(env, 'git', '-C', TEMP_DIR, 'commit', '-q', '-m', message, out: File::NULL, err: File::NULL)
+  end
+
+  def run_git(*)
+    system('git', *, out: File::NULL, err: File::NULL)
+  end
 end
 # rubocop:enable Metrics/ClassLength, Metrics/MethodLength

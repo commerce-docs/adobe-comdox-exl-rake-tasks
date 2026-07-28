@@ -41,6 +41,11 @@ class IncludesTasksTest < Minitest::Test
     assert_includes tasks, 'includes:maintain_timestamps'
   end
 
+  def test_available_tasks_includes_maintain_metadata_timestamps
+    tasks = AdobeComdoxExlRakeTasks::IncludesTasks.available_tasks
+    assert_includes tasks, 'includes:maintain_metadata_timestamps'
+  end
+
   def test_available_tasks_includes_maintain_all
     tasks = AdobeComdoxExlRakeTasks::IncludesTasks.available_tasks
     assert_includes tasks, 'includes:maintain_all'
@@ -53,6 +58,6 @@ class IncludesTasksTest < Minitest::Test
 
   def test_available_tasks_count
     tasks = AdobeComdoxExlRakeTasks::IncludesTasks.available_tasks
-    assert_equal 4, tasks.size
+    assert_equal 5, tasks.size
   end
 end

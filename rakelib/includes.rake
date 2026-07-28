@@ -30,12 +30,18 @@ require 'yaml'
 require 'colorator'
 require 'date'
 require 'tzinfo'
+require 'English'
 
 # rubocop:disable Metrics/ModuleLength
 
 # Helper methods for include management tasks
 module IncludesTasksHelper
   RELATIONSHIPS_FILE = 'include-relationships.yml'
+  # Git runs from the repo root (one level up from where rake is invoked, e.g.
+  # _jekyll/), so paths passed to `git show <ref>:<path>` are repo-relative.
+  GIT_ROOT = '..'
+  LAST_UPDATE_KEY = /\Alast-update\s*:/
+  HTML_COMMENT = /<!--[\s\S]*?-->/
 
   def self.current_timestamp
     TZInfo::Timezone.get('America/Chicago').now.strftime('%Y-%m-%d %H:%M:%S %Z')
@@ -217,6 +223,145 @@ module IncludesTasksHelper
       puts "Status: #{includes.size} unlinked includes detected".red
     end
   end
+
+  def self.maintain_metadata_timestamps
+    puts 'Running task: includes:maintain_metadata_timestamps'.magenta
+    puts 'Status: Starting last-update metadata maintenance...'.yellow
+
+    relationships = load_relationships
+    return unless relationships
+
+    files_processed = process_metadata_updates(relationships)
+
+    puts "Result: Successfully updated last-update metadata in #{files_processed} files".green
+    puts 'Task completed: includes:maintain_metadata_timestamps'.magenta
+  end
+
+  def self.process_metadata_updates(relationships)
+    ensure_topics_have_front_matter(relationships)
+    relationships['relationships'].count { |main_file, includes| update_metadata_for(main_file, includes) }
+  end
+
+  # Validates every existing topic up front and raises before any file is written, so a
+  # topic without front matter fails the whole run rather than leaving earlier topics
+  # half-updated. Reports all offenders at once.
+  def self.ensure_topics_have_front_matter(relationships)
+    missing = relationships['relationships'].keys.filter_map do |main_file|
+      path = "#{GIT_ROOT}/help/#{main_file}"
+      next unless File.exist?(path)
+
+      front_matter, = split_front_matter(File.read(path))
+      "help/#{main_file}" unless front_matter
+    end
+    return if missing.empty?
+
+    raise "No front matter in: #{missing.join(', ')}; cannot write the last-update metadata key."
+  end
+
+  # Returns the date written (truthy) when the file was updated, or nil when skipped.
+  def self.update_metadata_for(main_file, includes)
+    main_rel = "help/#{main_file}"
+    return unless File.exist?("#{GIT_ROOT}/#{main_rel}")
+
+    include_rels = includes.map { |include_path| include_path.sub(%r{\A/}, '') }
+    latest = latest_visible_commit_date(main_rel, include_rels)
+    return unless latest
+
+    write_last_update("#{GIT_ROOT}/#{main_rel}", latest.strftime('%Y-%m-%d'))
+  end
+
+  def self.latest_visible_commit_date(main_rel, include_rels)
+    [main_rel, *include_rels].filter_map { |rel| visible_commit_date(rel) }.max
+  end
+
+  # Runs git from the repo root with argv (no shell), so paths and refs containing shell
+  # metacharacters are passed literally rather than re-interpreted. stderr is discarded;
+  # $CHILD_STATUS reflects the child's exit status afterward.
+  def self.git_capture(*args)
+    IO.popen(['git', '-C', GIT_ROOT, *args], err: File::NULL, &:read)
+  end
+
+  # Date of the newest commit that changed user-visible content. Commits that only
+  # touch front matter or HTML comments are skipped, so writing the last-update key
+  # itself is never treated as a topic update.
+  def self.visible_commit_date(rel_path)
+    shas = git_capture('log', '--format=%H', '--', rel_path).split("\n")
+    sha = shas.find { |candidate| visible_content_changed?(candidate, rel_path) }
+    sha && commit_author_date(sha)
+  end
+
+  def self.visible_content_changed?(sha, rel_path)
+    visible_body_at(sha, rel_path) != visible_body_at("#{sha}^", rel_path)
+  end
+
+  # Content at a git ref with front matter and HTML comments removed and whitespace
+  # collapsed, leaving only what an end user would see. nil when the file is absent.
+  def self.visible_body_at(ref, rel_path)
+    content = git_capture('show', "#{ref}:#{rel_path}")
+    return nil unless $CHILD_STATUS.success?
+
+    _front_matter, body = split_front_matter(content)
+    body.gsub(HTML_COMMENT, '').gsub(/\s+/, ' ').strip
+  end
+
+  def self.commit_author_date(sha)
+    output = git_capture('show', '-s', '--format=%aI', sha).strip
+    return nil if output.empty?
+
+    DateTime.parse(output).to_time
+  rescue StandardError
+    nil
+  end
+
+  # Surgically adds/updates only the last-update line, leaving the rest of the front
+  # matter byte-for-byte intact. YAML parses the current value for an idempotent skip.
+  # Front matter is guaranteed present by ensure_topics_have_front_matter; returns the
+  # date written, or nil when there is nothing to change.
+  def self.write_last_update(path, date)
+    content = File.read(path)
+    front_matter, = split_front_matter(content)
+    return unless front_matter
+    return if front_matter_metadata(front_matter)['last-update'].to_s == date
+
+    File.write(path, insert_last_update(content, date))
+    date
+  end
+
+  def self.front_matter_metadata(front_matter)
+    YAML.safe_load(front_matter, permitted_classes: [Date, Time], aliases: true) || {}
+  rescue Psych::Exception
+    {}
+  end
+
+  def self.insert_last_update(content, date)
+    lines = content.lines
+    closing = front_matter_end(lines)
+    new_line = "last-update: #{date}\n"
+    existing = lines[1...closing].index { |line| line.match?(LAST_UPDATE_KEY) }
+
+    if existing
+      lines[1 + existing] = new_line
+    else
+      lines.insert(closing, new_line)
+    end
+    lines.join
+  end
+
+  # Splits a document into [front_matter_text, body]; front_matter_text is nil when absent.
+  def self.split_front_matter(content)
+    lines = content.lines
+    closing = front_matter_end(lines)
+    return [nil, content] unless closing
+
+    [lines[1...closing].join, lines[(closing + 1)..]&.join || '']
+  end
+
+  def self.front_matter_end(lines)
+    return nil unless lines[0]&.strip == '---'
+
+    offset = lines[1..].index { |line| line.strip == '---' }
+    offset && (offset + 1)
+  end
 end
 # rubocop:enable Metrics/ModuleLength
 
@@ -229,6 +374,13 @@ namespace :includes do
   desc 'Maintain include timestamps by adding latest include file change timestamps to main files.'
   task :maintain_timestamps do
     IncludesTasksHelper.maintain_timestamps
+  end
+
+  desc 'Add/update the last-update front matter metadata for topics with includes, using the git ' \
+       'history of each topic and its includes (whichever is more recent). Commits that only touch ' \
+       'front matter or HTML comments are ignored, since they are invisible to end users.'
+  task maintain_metadata_timestamps: :maintain_relationships do
+    IncludesTasksHelper.maintain_metadata_timestamps
   end
 
   desc 'Maintain both include relationships and timestamps in sequence.'
