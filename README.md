@@ -158,6 +158,16 @@ gem install ./adobe-comdox-exl-rake-tasks-0.3.0.gem
 bundle exec rake test
 ```
 
+Run the suite in a normal shell or CI runner (e.g. GitHub Actions), not inside a
+restrictive command sandbox. The integration tests shell out to real tools: they
+create a throwaway git repository under `tmp/test_workspace` and run `git init` /
+`git commit` against it, and one `images:svg_to_png` test launches headless
+Chrome/Chromium. A sandbox that blocks subprocess execution, git writes, or the
+browser's user-data directory will cause spurious failures (for the git-backed
+tests, `git` then resolves to the outer repository and finds no history). All
+tests pass in an unsandboxed environment where `git` and a Chromium-based browser
+are available.
+
 ## Contributing
 
 1. Fork the repository

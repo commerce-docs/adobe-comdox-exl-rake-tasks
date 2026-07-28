@@ -29,6 +29,7 @@ module AdobeComdoxExlRakeTasks
     # Available tasks:
     # - includes:maintain_relationships - Discover and maintain include relationships
     # - includes:maintain_timestamps - Update timestamps based on include changes
+    # - includes:maintain_metadata_timestamps - Write the last-update front matter key from git history
     # - includes:maintain_all - Run both operations in sequence
     # - includes:unused - Find unused include files
 
@@ -36,6 +37,7 @@ module AdobeComdoxExlRakeTasks
       %w[
         includes:maintain_relationships
         includes:maintain_timestamps
+        includes:maintain_metadata_timestamps
         includes:maintain_all
         includes:unused
       ]

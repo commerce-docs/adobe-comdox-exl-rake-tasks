@@ -314,5 +314,330 @@ class IncludesTasksIntegrationTest < Minitest::Test
     relationships_file = File.join(TEMP_DIR, 'rakelib', 'include-relationships.yml')
     assert File.exist?(relationships_file), 'include-relationships.yml should be created'
   end
+
+  def test_maintain_metadata_timestamps_writes_last_update_from_git_history
+    write_topic_with_include
+    init_git_repo
+    git_commit_all('Add topic and include', '2026-01-15T12:00:00')
+
+    run_task_in_workspace('includes:maintain_metadata_timestamps')
+
+    assert_includes read_test_file('help/topic.md'), 'last-update: 2026-01-15'
+  end
+
+  def test_metadata_timestamp_ignores_front_matter_only_commit
+    write_topic_with_include
+    init_git_repo
+    git_commit_all('Initial content', '2026-01-10T12:00:00')
+
+    # A later commit that only edits front matter must NOT advance last-update.
+    create_test_file('help/topic.md', topic_body(front_matter: "title: Topic\nexl-id: abc-123"))
+    git_commit_all('Add exl-id to front matter', '2026-02-20T12:00:00')
+
+    run_task_in_workspace('includes:maintain_metadata_timestamps')
+
+    body = read_test_file('help/topic.md')
+    assert_includes body, 'last-update: 2026-01-10'
+    refute_includes body, 'last-update: 2026-02-20'
+  end
+
+  def test_metadata_timestamp_ignores_html_comment_only_commit
+    write_topic_with_include
+    init_git_repo
+    git_commit_all('Initial content', '2026-01-10T12:00:00')
+
+    # The sibling includes:maintain_timestamps task appends an HTML comment marker;
+    # such an invisible edit must not advance last-update.
+    create_test_file('help/topic.md', "#{topic_body}\n<!-- Last updated from includes: 2026-03-01 09:00:00 -->\n")
+    git_commit_all('Append include timestamp comment', '2026-03-01T12:00:00')
+
+    run_task_in_workspace('includes:maintain_metadata_timestamps')
+
+    body = read_test_file('help/topic.md')
+    assert_includes body, 'last-update: 2026-01-10'
+    refute_includes body, 'last-update: 2026-03-01'
+  end
+
+  def test_metadata_timestamp_uses_latest_of_topic_and_include
+    write_topic_with_include
+    init_git_repo
+    git_commit_all('Initial content', '2026-01-10T12:00:00')
+
+    # Only the include changes, and more recently than the topic itself.
+    create_test_file('help/_includes/note.md', 'A revised note.')
+    git_commit_all('Revise include', '2026-04-05T12:00:00')
+
+    run_task_in_workspace('includes:maintain_metadata_timestamps')
+
+    assert_includes read_test_file('help/topic.md'), 'last-update: 2026-04-05'
+  end
+
+  def test_maintain_metadata_timestamps_is_idempotent
+    write_topic_with_include
+    init_git_repo
+    git_commit_all('Add topic and include', '2026-01-15T12:00:00')
+
+    run_task_in_workspace('includes:maintain_metadata_timestamps')
+    after_first = read_test_file('help/topic.md')
+    run_task_in_workspace('includes:maintain_metadata_timestamps')
+    after_second = read_test_file('help/topic.md')
+
+    assert_equal after_first, after_second
+    assert_equal 1, after_second.scan('last-update:').size
+  end
+
+  def test_metadata_timestamp_does_not_shell_out_for_paths_with_metacharacters
+    # The include filename contains a shell command substitution. Every git call must
+    # pass paths as literal argv entries; if any interpolated it into a shell instead,
+    # this would create injected_marker.txt.
+    include_name = 'note$(touch injected_marker.txt).md'
+    create_test_file('help/topic.md', <<~MARKDOWN)
+      ---
+      title: Topic
+      ---
+
+      # Topic
+
+      Some visible prose.
+
+      {{$include /help/_includes/#{include_name}}}
+    MARKDOWN
+    create_test_file("help/_includes/#{include_name}", 'A note.')
+    init_git_repo
+    git_commit_all('Add topic and include', '2026-01-15T12:00:00')
+
+    run_task_in_workspace('includes:maintain_metadata_timestamps')
+
+    assert_empty Dir.glob(File.join(TEMP_DIR, '**', 'injected_marker.txt')),
+                 'shell metacharacters in an include path were executed'
+  end
+
+  def test_maintain_metadata_timestamps_fails_for_topic_without_front_matter
+    # A topic with includes but no front matter has nowhere to write last-update, so the
+    # task must fail loudly rather than silently skip it.
+    create_test_file('help/topic.md', <<~MARKDOWN)
+      # Topic
+
+      Some visible prose.
+
+      {{$include /help/_includes/note.md}}
+    MARKDOWN
+    create_test_file('help/_includes/note.md', 'A note.')
+    init_git_repo
+    git_commit_all('Add topic and include', '2026-01-15T12:00:00')
+
+    output = run_task_in_workspace('includes:maintain_metadata_timestamps')
+
+    assert_includes output, 'No front matter'
+  end
+
+  def test_maintain_metadata_timestamps_is_atomic_when_a_topic_lacks_front_matter
+    # aaa.md (sorted first, so processed first) has front matter; zzz.md does not. The run
+    # must fail without writing last-update to aaa.md -- it is all-or-nothing.
+    create_test_file('help/aaa.md', <<~MARKDOWN)
+      ---
+      title: Good
+      ---
+
+      # Good
+
+      {{$include /help/_includes/note.md}}
+    MARKDOWN
+    create_test_file('help/zzz.md', <<~MARKDOWN)
+      # Bad
+
+      {{$include /help/_includes/note.md}}
+    MARKDOWN
+    create_test_file('help/_includes/note.md', 'A note.')
+    init_git_repo
+    git_commit_all('Add topics and include', '2026-01-15T12:00:00')
+
+    output = run_task_in_workspace('includes:maintain_metadata_timestamps')
+
+    assert_includes output, 'No front matter'
+    refute_includes read_test_file('help/aaa.md'), 'last-update:'
+  end
+
+  def test_metadata_timestamp_ignores_move_to_include_that_does_not_change_rendered_output
+    # Inline prose is relocated verbatim into an include on a feature branch and merged to
+    # main. Readers see an identical rendered page, so the publish must not advance
+    # last-update past the date the prose was actually authored.
+    create_test_file('help/topic.md', topic_with_body('The quick brown fox jumps over the lazy dog.'))
+    init_git_repo
+    git_commit_all('Author inline prose', '2026-01-10T12:00:00')
+
+    git_checkout('feat', create: true)
+    create_test_file('help/_includes/fox.md', "The quick brown fox jumps over the lazy dog.\n")
+    create_test_file('help/topic.md', topic_with_body('{{$include /help/_includes/fox.md}}'))
+    git_commit_all('Move prose into an include', '2026-02-20T12:00:00')
+
+    git_checkout('main')
+    git_merge('feat', 'Merge PR: move prose to include', '2026-02-25T12:00:00')
+
+    run_task_in_workspace('includes:maintain_metadata_timestamps')
+
+    body = read_test_file('help/topic.md')
+    assert_includes body, 'last-update: 2026-01-10'
+    refute_includes body, 'last-update: 2026-02-25'
+  end
+
+  def test_metadata_timestamp_advances_to_publish_when_move_to_include_changes_rendered_output
+    # Same move-to-include, but the include adds a heading the page never had, so the
+    # rendered output genuinely changes. The date must advance to the production publish
+    # (the merge to main) -- not the original prose date, and not the feature-branch commit.
+    create_test_file('help/topic.md', topic_with_body('The quick brown fox jumps over the lazy dog.'))
+    init_git_repo
+    git_commit_all('Author inline prose', '2026-01-10T12:00:00')
+
+    git_checkout('feat', create: true)
+    create_test_file('help/_includes/fox.md', "## Reference\n\nThe quick brown fox jumps over the lazy dog.\n")
+    create_test_file('help/topic.md', topic_with_body('{{$include /help/_includes/fox.md}}'))
+    git_commit_all('Move prose into an include and add a heading', '2026-02-20T12:00:00')
+
+    git_checkout('main')
+    git_merge('feat', 'Merge PR: move prose to include', '2026-02-25T12:00:00')
+
+    run_task_in_workspace('includes:maintain_metadata_timestamps')
+
+    assert_includes read_test_file('help/topic.md'), 'last-update: 2026-02-25'
+  end
+
+  def test_metadata_timestamp_follows_nested_includes
+    # topic -> outer include -> inner include. Editing the innermost include changes the
+    # topic's rendered output and must advance last-update, even though the topic never
+    # references the inner include directly (so the relationships index does not list it).
+    create_test_file('help/topic.md', topic_with_body('{{$include /help/_includes/outer.md}}'))
+    create_test_file('help/_includes/outer.md', "Outer intro.\n\n{{$include /help/_includes/inner.md}}\n")
+    create_test_file('help/_includes/inner.md', "Original inner text.\n")
+    init_git_repo
+    git_commit_all('Add topic with nested includes', '2026-01-10T12:00:00')
+
+    create_test_file('help/_includes/inner.md', "Revised inner text.\n")
+    git_commit_all('Edit the innermost include', '2026-05-01T12:00:00')
+
+    run_task_in_workspace('includes:maintain_metadata_timestamps')
+
+    assert_includes read_test_file('help/topic.md'), 'last-update: 2026-05-01'
+  end
+
+  def test_maintain_metadata_timestamps_fails_when_production_branch_absent
+    # In a detached-HEAD or single-branch checkout there is no local `main`, so the history
+    # walk would find nothing. The task must fail loudly rather than report success while
+    # silently writing no last-update.
+    create_test_file('help/topic.md', topic_with_body('{{$include /help/_includes/note.md}}'))
+    create_test_file('help/_includes/note.md', "A note.\n")
+    init_git_repo(default_branch: 'feature')
+    git_commit_all('Publish topic', '2026-01-10T12:00:00')
+
+    output = run_task_in_workspace('includes:maintain_metadata_timestamps')
+
+    assert_includes output, "Production branch 'main' is not available"
+    refute_includes read_test_file('help/topic.md'), 'last-update:'
+  end
+
+  def test_metadata_timestamp_reflects_production_branch_not_the_checked_out_branch
+    # last-update tracks what readers see on main. An unmerged edit on the branch the task
+    # happens to run from must not leak into the date, even though that edit is what gets
+    # written to disk.
+    create_test_file('help/topic.md', topic_with_body('{{$include /help/_includes/note.md}}'))
+    create_test_file('help/_includes/note.md', "A note.\n")
+    init_git_repo
+    git_commit_all('Publish topic', '2026-01-10T12:00:00')
+
+    git_checkout('feat', create: true)
+    create_test_file('help/_includes/note.md', "A substantially rewritten note.\n")
+    git_commit_all('Unpublished rewrite on a feature branch', '2026-06-01T12:00:00')
+
+    run_task_in_workspace('includes:maintain_metadata_timestamps')
+
+    body = read_test_file('help/topic.md')
+    assert_includes body, 'last-update: 2026-01-10'
+    refute_includes body, 'last-update: 2026-06-01'
+  end
+
+  private
+
+  # A topic with front matter wrapping a single body line (prose or an include directive).
+  def topic_with_body(body)
+    <<~MARKDOWN
+      ---
+      title: Topic
+      ---
+
+      # Topic
+
+      #{body}
+    MARKDOWN
+  end
+
+  # A topic that references one include, plus the include itself.
+  def write_topic_with_include
+    create_test_file('help/topic.md', topic_body)
+    create_test_file('help/_includes/note.md', 'A note.')
+  end
+
+  def topic_body(front_matter: 'title: Topic')
+    <<~MARKDOWN
+      ---
+      #{front_matter}
+      ---
+
+      # Topic
+
+      Some visible prose.
+
+      {{$include /help/_includes/note.md}}
+    MARKDOWN
+  end
+
+  def init_git_repo(default_branch: 'main')
+    run_git('init', '-q', TEMP_DIR)
+    # Pin the default branch so merge-based tests can check out 'main' deterministically,
+    # regardless of the host git's init.defaultBranch setting.
+    run_git('-C', TEMP_DIR, 'symbolic-ref', 'HEAD', "refs/heads/#{default_branch}")
+    run_git('-C', TEMP_DIR, 'config', 'user.email', 'test@example.com')
+    run_git('-C', TEMP_DIR, 'config', 'user.name', 'Test')
+    run_git('-C', TEMP_DIR, 'config', 'commit.gpgsign', 'false')
+    run_git('-C', TEMP_DIR, 'config', 'core.hooksPath', File::NULL)
+    assert_workspace_git_isolated
+  end
+
+  # Fails loudly if the workspace is not its own git repository. In a restricted sandbox
+  # `git init` cannot create the nested repo, so git commands against TEMP_DIR resolve
+  # upward to the gem's own repository -- and the tests' add/commit/merge would then
+  # rewrite real project history. Abort here, before any commit, rather than corrupt it.
+  def assert_workspace_git_isolated
+    toplevel = IO.popen(['git', '-C', TEMP_DIR, 'rev-parse', '--show-toplevel'], err: File::NULL, &:read).strip
+    return if !toplevel.empty? && File.identical?(toplevel, TEMP_DIR)
+
+    raise "Workspace git repo is not isolated: `git -C #{TEMP_DIR}` resolved to " \
+          "#{toplevel.empty? ? '(no repository)' : toplevel}, not the workspace itself. " \
+          'This happens in a restricted sandbox where `git init` cannot create the nested ' \
+          'repo; run the integration tests unsandboxed (see README).'
+  end
+
+  def git_commit_all(message, iso_date)
+    run_git('-C', TEMP_DIR, 'add', '-A')
+    env = { 'GIT_AUTHOR_DATE' => iso_date, 'GIT_COMMITTER_DATE' => iso_date }
+    system(env, 'git', '-C', TEMP_DIR, 'commit', '-q', '-m', message, out: File::NULL, err: File::NULL)
+  end
+
+  def git_checkout(branch, create: false)
+    args = ['-C', TEMP_DIR, 'checkout', '-q']
+    args << '-b' if create
+    run_git(*args, branch)
+  end
+
+  # Merges branch into the current branch with a real merge commit (no fast-forward),
+  # mirroring how a PR lands on the mainline.
+  def git_merge(branch, message, iso_date)
+    env = { 'GIT_AUTHOR_DATE' => iso_date, 'GIT_COMMITTER_DATE' => iso_date }
+    system(env, 'git', '-C', TEMP_DIR, 'merge', '-q', '--no-ff', '-m', message, branch,
+           out: File::NULL, err: File::NULL)
+  end
+
+  def run_git(*)
+    system('git', *, out: File::NULL, err: File::NULL)
+  end
 end
 # rubocop:enable Metrics/ClassLength, Metrics/MethodLength

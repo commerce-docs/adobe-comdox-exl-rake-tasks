@@ -218,17 +218,23 @@ namespace :images do
     puts "\nChecking images ...".magenta
     path = ENV.fetch('path', nil)
 
-    unless path
+    if path
+      # A caller-provided `path` may pack several paths into one whitespace-separated
+      # argument, so each is passed as its own argv entry and must not contain spaces.
+      paths = path.split
+    else
       puts 'Looking in uncommitted files ...'.blue
-      files = ImageTasksHelper.uncommitted_image_files
-      next puts 'No images to check.'.magenta if files.empty?
-
-      path = files.join(' ')
+      paths = ImageTasksHelper.uncommitted_image_files
+      next puts 'No images to check.'.magenta if paths.empty?
     end
 
-    ENV['path'] = path
-
-    system "bundle exec image_optim --recursive --no-svgo #{path}"
+    # Pass each path as its own argv entry (no shell involved) so filenames containing shell
+    # metacharacters (quotes, globs, `$`, `;`, etc.) are never re-interpreted by a shell.
+    success = system('bundle', 'exec', 'image_optim', '--recursive', '--no-svgo', *paths)
+    unless success
+      raise "Image optimization failed for: #{paths.join(', ')}. " \
+            'Verify each file exists and that file names contain no spaces.'
+    end
   end
 
   desc 'Find unused images.'

@@ -17,6 +17,7 @@ Contains include management tasks organized in the `:includes` namespace:
 
 - `includes:maintain_relationships` - Discover and maintain include relationships in markdown files
 - `includes:maintain_timestamps` - Add/update timestamps based on include file changes
+- `includes:maintain_metadata_timestamps` - Write the `last-update` front matter key from the git history of each topic and its includes, ignoring commits that only touch front matter or HTML comments
 - `includes:maintain_all` - Run both operations in sequence
 - `includes:unused` - Find unused include files
 
