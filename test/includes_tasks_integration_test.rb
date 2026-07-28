@@ -520,6 +520,21 @@ class IncludesTasksIntegrationTest < Minitest::Test
     assert_includes read_test_file('help/topic.md'), 'last-update: 2026-05-01'
   end
 
+  def test_maintain_metadata_timestamps_fails_when_production_branch_absent
+    # In a detached-HEAD or single-branch checkout there is no local `main`, so the history
+    # walk would find nothing. The task must fail loudly rather than report success while
+    # silently writing no last-update.
+    create_test_file('help/topic.md', topic_with_body('{{$include /help/_includes/note.md}}'))
+    create_test_file('help/_includes/note.md', "A note.\n")
+    init_git_repo(default_branch: 'feature')
+    git_commit_all('Publish topic', '2026-01-10T12:00:00')
+
+    output = run_task_in_workspace('includes:maintain_metadata_timestamps')
+
+    assert_includes output, "Production branch 'main' is not available"
+    refute_includes read_test_file('help/topic.md'), 'last-update:'
+  end
+
   def test_metadata_timestamp_reflects_production_branch_not_the_checked_out_branch
     # last-update tracks what readers see on main. An unmerged edit on the branch the task
     # happens to run from must not leak into the date, even though that edit is what gets
@@ -575,11 +590,11 @@ class IncludesTasksIntegrationTest < Minitest::Test
     MARKDOWN
   end
 
-  def init_git_repo
+  def init_git_repo(default_branch: 'main')
     run_git('init', '-q', TEMP_DIR)
     # Pin the default branch so merge-based tests can check out 'main' deterministically,
     # regardless of the host git's init.defaultBranch setting.
-    run_git('-C', TEMP_DIR, 'symbolic-ref', 'HEAD', 'refs/heads/main')
+    run_git('-C', TEMP_DIR, 'symbolic-ref', 'HEAD', "refs/heads/#{default_branch}")
     run_git('-C', TEMP_DIR, 'config', 'user.email', 'test@example.com')
     run_git('-C', TEMP_DIR, 'config', 'user.name', 'Test')
     run_git('-C', TEMP_DIR, 'config', 'commit.gpgsign', 'false')

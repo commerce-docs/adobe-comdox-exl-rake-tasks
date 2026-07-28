@@ -246,8 +246,22 @@ module IncludesTasksHelper
   end
 
   def self.process_metadata_updates(relationships)
+    ensure_production_ref_exists
     ensure_topics_have_front_matter(relationships)
     relationships['relationships'].count { |main_file, _includes| update_metadata_for(main_file) }
+  end
+
+  # Fails loudly when PRODUCTION_REF cannot be resolved (e.g. a detached-HEAD or
+  # single-branch CI checkout with no local 'main'). Without this, every topic's history
+  # walk would come back empty and the task would report success while writing nothing.
+  def self.ensure_production_ref_exists
+    git_capture('rev-parse', '--verify', '--quiet', "#{PRODUCTION_REF}^{commit}")
+    return if $CHILD_STATUS.success?
+
+    raise "Production branch '#{PRODUCTION_REF}' is not available in this repository; " \
+          'last-update is computed from its history. Fetch or create a local ' \
+          "'#{PRODUCTION_REF}' ref (e.g. `git fetch origin #{PRODUCTION_REF}:#{PRODUCTION_REF}` " \
+          'in CI) before running this task.'
   end
 
   # Validates every existing topic up front and raises before any file is written, so a
