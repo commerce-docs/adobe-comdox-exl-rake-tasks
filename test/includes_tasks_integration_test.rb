@@ -584,6 +584,21 @@ class IncludesTasksIntegrationTest < Minitest::Test
     run_git('-C', TEMP_DIR, 'config', 'user.name', 'Test')
     run_git('-C', TEMP_DIR, 'config', 'commit.gpgsign', 'false')
     run_git('-C', TEMP_DIR, 'config', 'core.hooksPath', File::NULL)
+    assert_workspace_git_isolated
+  end
+
+  # Fails loudly if the workspace is not its own git repository. In a restricted sandbox
+  # `git init` cannot create the nested repo, so git commands against TEMP_DIR resolve
+  # upward to the gem's own repository -- and the tests' add/commit/merge would then
+  # rewrite real project history. Abort here, before any commit, rather than corrupt it.
+  def assert_workspace_git_isolated
+    toplevel = IO.popen(['git', '-C', TEMP_DIR, 'rev-parse', '--show-toplevel'], err: File::NULL, &:read).strip
+    return if !toplevel.empty? && File.identical?(toplevel, TEMP_DIR)
+
+    raise "Workspace git repo is not isolated: `git -C #{TEMP_DIR}` resolved to " \
+          "#{toplevel.empty? ? '(no repository)' : toplevel}, not the workspace itself. " \
+          'This happens in a restricted sandbox where `git init` cannot create the nested ' \
+          'repo; run the integration tests unsandboxed (see README).'
   end
 
   def git_commit_all(message, iso_date)
