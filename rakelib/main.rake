@@ -80,30 +80,54 @@ end
 
 # Utility Tasks
 desc 'Render the templated files.
-  Renders the templated files in the "_jekyll/templates" directory.
-  The result will be found in the "help/_includes/templated" directory.
+  Run from the Jekyll helper directory and configure templated_dest in "_config.yml".
+  Defaults to "help/_includes/templated" relative to the current directory.
   Requires Jekyll to be installed in the consuming project.'
 task :render do
   RenderTaskHelper.render_templates
-  Rake::Task['includes:maintain_all'].invoke
 end
 
 # Helper module for render task
 module RenderTaskHelper
-  JEKYLL_DIR = '../_jekyll'
-  SITE_DIR = "#{JEKYLL_DIR}/_site".freeze
-  TEMPLATED_SRC = "#{SITE_DIR}/templated".freeze
-  TEMPLATED_DEST = '../help/_includes/templated'
+  TEMPLATED_DEST = 'help/_includes/templated'
 
   def self.render_templates
     puts 'Rendering templated files...'.magenta
 
+    configure_paths
     verify_jekyll_installed
     run_jekyll_build
     rename_html_to_md
     copy_to_includes
 
     puts 'Templates rendered successfully.'.green
+  end
+
+  def self.configure_paths
+    @helper_dir = Dir.pwd
+    config = load_config(@helper_dir)
+    @templated_dest = configured_path(config, 'templated_dest', TEMPLATED_DEST, @helper_dir)
+    @site_dir = File.join(@helper_dir, '_site')
+    @templated_src = File.join(@site_dir, 'templated')
+  end
+
+  def self.load_config(repository_dir)
+    config_path = File.join(repository_dir, '_config.yml')
+    return {} unless File.file?(config_path)
+
+    config = YAML.safe_load_file(config_path, permitted_classes: [Date, Time], aliases: true) || {}
+    raise ArgumentError, '_config.yml must contain a YAML mapping.' unless config.is_a?(Hash)
+
+    config
+  end
+
+  def self.configured_path(config, key, default, repository_dir)
+    path = config.fetch(key, default)
+    unless path.is_a?(String) && !path.strip.empty?
+      raise ArgumentError, "#{key} in _config.yml must be a non-empty string."
+    end
+
+    File.expand_path(path, repository_dir)
   end
 
   def self.verify_jekyll_installed
@@ -114,7 +138,7 @@ module RenderTaskHelper
 
   def self.run_jekyll_build
     puts 'Running Jekyll build...'.blue
-    Dir.chdir(JEKYLL_DIR) do
+    Dir.chdir(@helper_dir) do
       success = system('bundle exec jekyll build --disable-disk-cache')
       abort 'Jekyll build failed.'.red unless success
     end
@@ -122,17 +146,17 @@ module RenderTaskHelper
 
   def self.rename_html_to_md
     puts 'Converting .html files to .md...'.blue
-    Dir.glob("#{SITE_DIR}/**/*.html").each do |html_file|
+    Dir.glob("#{@site_dir}/**/*.html").each do |html_file|
       md_file = html_file.sub(/\.html$/, '.md')
       FileUtils.mv(html_file, md_file)
     end
   end
 
   def self.copy_to_includes
-    return unless Dir.exist?(TEMPLATED_SRC)
+    return unless Dir.exist?(@templated_src)
 
-    puts 'Copying rendered templates to help/_includes/templated/...'.blue
-    FileUtils.mkdir_p(TEMPLATED_DEST)
-    FileUtils.cp_r(Dir.glob("#{TEMPLATED_SRC}/*"), TEMPLATED_DEST)
+    puts "Copying rendered templates to #{@templated_dest}/...".blue
+    FileUtils.mkdir_p(@templated_dest)
+    FileUtils.cp_r(Dir.glob("#{@templated_src}/*"), @templated_dest)
   end
 end

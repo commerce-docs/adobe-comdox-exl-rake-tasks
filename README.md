@@ -138,6 +138,26 @@ repository/
 └── Rakefile               # Your main Rakefile
 ```
 
+### Render configuration
+
+Run `bundle exec rake render` from the Jekyll helper directory, such as
+`_jekyll/` or `_helper/`. The task always uses the current directory as the
+helper directory; any `helper_dir` setting is ignored.
+
+Configure the output destination in that directory's `_config.yml`. For a
+helper directory directly below the repository root:
+
+```yaml
+templated_dest: ../help/_includes/templated
+```
+
+For a Developer site, use `templated_dest: ../src/pages/_includes/templated`.
+Relative paths are resolved from the current directory; absolute paths are
+also supported. If the file or key is missing, the destination defaults to
+`help/_includes/templated` within the current directory.
+Jekyll builds into `./_site`, and rendered files from `./_site/templated` are
+copied to `templated_dest`.
+
 ## Development
 
 ### Building the Gem
