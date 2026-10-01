@@ -80,8 +80,8 @@ end
 
 # Utility Tasks
 desc 'Render the templated files.
-  Configure helper_dir and templated_dest in the repository "_config.yml".
-  Defaults to "_jekyll" and "help/_includes/templated" in the repository root.
+  Run from the Jekyll helper directory and configure templated_dest in "_config.yml".
+  Defaults to "help/_includes/templated" relative to the current directory.
   Requires Jekyll to be installed in the consuming project.'
 task :render do
   RenderTaskHelper.render_templates
@@ -89,7 +89,6 @@ end
 
 # Helper module for render task
 module RenderTaskHelper
-  HELPER_DIR = '_jekyll'
   TEMPLATED_DEST = 'help/_includes/templated'
 
   def self.render_templates
@@ -105,10 +104,9 @@ module RenderTaskHelper
   end
 
   def self.configure_paths
-    repository_dir = File.basename(Dir.pwd) == 'rakelib' ? File.expand_path('..') : Dir.pwd
-    config = load_config(repository_dir)
-    @helper_dir = configured_path(config, 'helper_dir', HELPER_DIR, repository_dir)
-    @templated_dest = configured_path(config, 'templated_dest', TEMPLATED_DEST, repository_dir)
+    @helper_dir = Dir.pwd
+    config = load_config(@helper_dir)
+    @templated_dest = configured_path(config, 'templated_dest', TEMPLATED_DEST, @helper_dir)
     @site_dir = File.join(@helper_dir, '_site')
     @templated_src = File.join(@site_dir, 'templated')
   end

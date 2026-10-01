@@ -13,61 +13,61 @@ class RenderTaskHelperTest < Minitest::Test
     teardown_test_workspace
   end
 
-  def test_defaults_without_repository_config
-    create_rendered_template('_jekyll')
+  def test_defaults_without_configuration
+    create_rendered_template('rakelib')
 
     output = render_from('rakelib')
 
     assert_includes output, 'Templates rendered successfully.'
-    assert_equal 'Rendered content', read_test_file('help/_includes/templated/example.md')
+    assert_equal 'Rendered content', read_test_file('rakelib/help/_includes/templated/example.md')
   end
 
-  def test_defaults_from_repository_root_with_empty_config
+  def test_defaults_from_current_directory_with_empty_config
     create_test_file('_config.yml', '')
-    create_rendered_template('_jekyll')
+    create_rendered_template('.')
 
     render_from('.')
 
     assert file_exists?('help/_includes/templated/example.md')
   end
 
-  def test_custom_helper_directory_with_default_destination
-    create_test_file('_config.yml', "helper_dir: custom-helper\n")
-    create_rendered_template('custom-helper')
-    create_test_file('custom-helper/_config.yml', 'helper_dir: ignored')
+  def test_helper_dir_configuration_is_ignored
+    create_test_file('_helper/_config.yml', "helper_dir: nonexistent\n")
+    create_rendered_template('_helper')
 
-    render_from('rakelib')
+    render_from('_helper')
 
-    assert file_exists?('help/_includes/templated/example.md')
-    refute file_exists?('_jekyll/_site/templated/example.md')
+    assert file_exists?('_helper/help/_includes/templated/example.md')
+    refute file_exists?('nonexistent/_site/templated/example.md')
   end
 
-  def test_custom_destination_with_default_helper_directory
-    create_test_file('_config.yml', "templated_dest: help/_includes/custom\n")
-    create_rendered_template('_jekyll')
+  def test_custom_destination_uses_current_directory_configuration
+    create_test_file('_config.yml', "templated_dest: ignored\n")
+    create_test_file('rakelib/_config.yml', "templated_dest: ../help/_includes/custom\n")
+    create_rendered_template('rakelib')
 
     output = render_from('rakelib')
 
     assert file_exists?('help/_includes/custom/example.md')
     refute file_exists?('help/_includes/templated/example.md')
+    refute file_exists?('ignored/example.md')
     assert_includes output, File.join(TEMP_DIR, 'help/_includes/custom')
   end
 
-  def test_relative_overrides_from_repository_root
-    create_test_file('_config.yml', "helper_dir: helper\ntemplated_dest: output\n")
-    create_rendered_template('helper')
+  def test_relative_destination_from_helper_directory
+    create_test_file('_helper/_config.yml', "templated_dest: ../src/pages/_includes/templated\n")
+    create_rendered_template('_helper')
 
-    render_from('.')
+    render_from('_helper')
 
-    assert_equal 'Rendered content', read_test_file('output/example.md')
+    assert_equal 'Rendered content', read_test_file('src/pages/_includes/templated/example.md')
   end
 
-  def test_absolute_overrides
-    create_test_file('_config.yml', {
-      'helper_dir' => File.join(TEMP_DIR, 'helper'),
+  def test_absolute_destination
+    create_test_file('rakelib/_config.yml', {
       'templated_dest' => File.join(TEMP_DIR, 'output')
     }.to_yaml)
-    create_rendered_template('helper')
+    create_rendered_template('rakelib')
 
     render_from('rakelib')
 
@@ -75,25 +75,24 @@ class RenderTaskHelperTest < Minitest::Test
   end
 
   def test_configuration_is_reloaded_for_each_render
-    create_rendered_template('_jekyll')
+    create_rendered_template('rakelib')
     render_from('rakelib')
-    create_test_file('_config.yml', "helper_dir: helper\ntemplated_dest: output\n")
-    create_rendered_template('helper')
+    create_test_file('_helper/_config.yml', "templated_dest: ../output\n")
+    create_rendered_template('_helper')
 
-    render_from('rakelib')
+    render_from('_helper')
 
     assert file_exists?('output/example.md')
   end
 
   def test_configuration_supports_yaml_dates_and_aliases
-    create_test_file('_config.yml', <<~YAML)
+    create_test_file('rakelib/_config.yml', <<~YAML)
       updated: 2026-10-01
       published: 2026-10-01 12:00:00 Z
-      helper_dir: &helper helper
-      other_directory: *helper
-      templated_dest: output
+      templated_dest: &destination ../output
+      other_directory: *destination
     YAML
-    create_rendered_template('helper')
+    create_rendered_template('rakelib')
 
     render_from('rakelib')
 
@@ -110,17 +109,15 @@ class RenderTaskHelperTest < Minitest::Test
     assert_includes error.message, 'must contain a YAML mapping'
   end
 
-  def test_configured_paths_require_non_empty_strings
-    %w[helper_dir templated_dest].each do |key|
-      [nil, '', '   ', 42, []].each do |value|
-        create_test_file('_config.yml', { key => value }.to_yaml)
+  def test_destination_requires_a_non_empty_string
+    [nil, '', '   ', 42, []].each do |value|
+      create_test_file('_config.yml', { 'templated_dest' => value }.to_yaml)
 
-        error = assert_raises(ArgumentError) do
-          Dir.chdir(TEMP_DIR) { RenderTaskHelper.configure_paths }
-        end
-
-        assert_includes error.message, "#{key} in _config.yml must be a non-empty string"
+      error = assert_raises(ArgumentError) do
+        Dir.chdir(TEMP_DIR) { RenderTaskHelper.configure_paths }
       end
+
+      assert_includes error.message, 'templated_dest in _config.yml must be a non-empty string'
     end
   end
 

@@ -37,7 +37,8 @@ class UtilityTasksIntegrationTest < Minitest::Test
   end
 
   def test_render_builds_jekyll_site_and_copies_templated_output
-    create_test_file('_jekyll/templated/example.md', <<~MARKDOWN)
+    create_test_file('rakelib/_config.yml', "templated_dest: ../help/_includes/templated\n")
+    create_test_file('rakelib/templated/example.md', <<~MARKDOWN)
       ---
       title: Example
       ---
@@ -57,9 +58,9 @@ class UtilityTasksIntegrationTest < Minitest::Test
     assert_includes read_test_file('help/_includes/templated/example.md'), 'Hello world'
   end
 
-  def test_render_uses_repository_configured_paths
-    create_test_file('_config.yml', "helper_dir: custom-helper\ntemplated_dest: help/_includes/custom\n")
-    create_test_file('custom-helper/templated/example.md', <<~MARKDOWN)
+  def test_render_uses_current_directory_and_configured_destination
+    create_test_file('rakelib/_config.yml', "helper_dir: nonexistent\ntemplated_dest: ../help/_includes/custom\n")
+    create_test_file('rakelib/templated/example.md', <<~MARKDOWN)
       ---
       title: Example
       ---
