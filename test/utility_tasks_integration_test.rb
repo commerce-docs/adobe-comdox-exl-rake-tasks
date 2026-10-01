@@ -57,6 +57,22 @@ class UtilityTasksIntegrationTest < Minitest::Test
     assert_includes read_test_file('help/_includes/templated/example.md'), 'Hello world'
   end
 
+  def test_render_uses_repository_configured_paths
+    create_test_file('_config.yml', "helper_dir: custom-helper\ntemplated_dest: help/_includes/custom\n")
+    create_test_file('custom-helper/templated/example.md', <<~MARKDOWN)
+      ---
+      title: Example
+      ---
+      Hello {{ "custom world" }}
+    MARKDOWN
+
+    output = run_task_in_workspace('render')
+
+    assert_includes output, 'Templates rendered successfully.'
+    assert_includes read_test_file('help/_includes/custom/example.md'), 'Hello custom world'
+    refute file_exists?('help/_includes/templated/example.md')
+  end
+
   def test_render_also_runs_include_maintenance
     create_test_file('_jekyll/templated/example.md', <<~MARKDOWN)
       ---
