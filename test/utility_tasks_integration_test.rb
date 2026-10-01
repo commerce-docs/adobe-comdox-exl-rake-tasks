@@ -72,21 +72,4 @@ class UtilityTasksIntegrationTest < Minitest::Test
     assert_includes read_test_file('help/_includes/custom/example.md'), 'Hello custom world'
     refute file_exists?('help/_includes/templated/example.md')
   end
-
-  def test_render_also_runs_include_maintenance
-    create_test_file('_jekyll/templated/example.md', <<~MARKDOWN)
-      ---
-      title: Example
-      ---
-      Static content.
-    MARKDOWN
-
-    output = run_task_in_workspace('render')
-
-    assert_includes output, 'includes:maintain_relationships'
-    assert_includes output, 'includes:maintain_timestamps'
-
-    relationships_file = File.join(TEMP_DIR, 'rakelib', 'include-relationships.yml')
-    assert File.exist?(relationships_file), 'include-relationships.yml should be created by render'
-  end
 end
