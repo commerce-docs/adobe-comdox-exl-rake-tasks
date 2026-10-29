@@ -2,6 +2,7 @@
 
 require 'bundler/gem_tasks'
 require 'rake/testtask'
+require_relative 'lib/adobe-comdox-exl-rake-tasks/version'
 
 Rake::TestTask.new(:test) do |t|
   t.libs << 'test'
@@ -19,7 +20,7 @@ end
 
 desc 'Install the gem locally'
 task install: :build do
-  sh 'gem install ./adobe-comdox-exl-rake-tasks-0.1.0.gem'
+  sh "gem install ./adobe-comdox-exl-rake-tasks-#{AdobeComdoxExlRakeTasks::VERSION}.gem"
 end
 
 desc 'Uninstall the gem locally'

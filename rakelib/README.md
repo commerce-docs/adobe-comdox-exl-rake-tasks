@@ -9,7 +9,12 @@ This directory contains rake task definitions organized by functionality. Rake a
 Contains common requires, shared functionality, and non-namespaced tasks for Adobe Commerce Docs in ExL documentation repository rake tasks:
 
 - `whatsnew` - Generate data for news digest (default: since last update)
-- `render` - Render templated files and maintain includes
+- `render` - Render templated files from the current Jekyll helper directory into a destination detected from the Git repository layout
+
+The `render` task does not run include maintenance automatically. Invoke
+`includes:maintain_all` explicitly when needed. See
+[Render configuration](../README.md#render-configuration) for requirements and
+destination precedence.
 
 ### `includes.rake`
 

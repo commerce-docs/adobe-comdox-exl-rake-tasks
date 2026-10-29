@@ -118,7 +118,7 @@ apt-get install librsvg2-bin imagemagick
 ### Utility Tasks
 
 ```bash
-# Render templated files
+# Render templated files from the Jekyll helper directory
 bundle exec rake render
 
 # Show task help
@@ -157,6 +157,21 @@ Jekyll builds into `./_site`, and rendered files from `./_site/templated` are
 copied to the detected destination. Both build paths remain relative to the
 current Jekyll helper directory.
 
+### Upgrading from 0.5.0
+
+- Run `render` from the directory containing the Jekyll site, such as `_jekyll/`
+  or `_helper/`, rather than relying on the previous `../_jekyll` resolution.
+- Ensure Git is installed and the helper directory is inside the intended Git
+  repository, with either `src/pages` or `help/_includes` at its root.
+- Check the detected destination. If both layouts exist, rendered templates now
+  go to `src/pages/_includes/templated`, not `help/_includes/templated`.
+- Invoke include maintenance explicitly if your workflow needs it; `render` no
+  longer runs `includes:maintain_all` automatically:
+
+  ```bash
+  bundle exec rake render includes:maintain_all
+  ```
+
 ## Development
 
 ### Building the Gem
@@ -168,7 +183,7 @@ gem build adobe-comdox-exl-rake-tasks.gemspec
 ### Installing Locally
 
 ```bash
-gem install ./adobe-comdox-exl-rake-tasks-0.3.0.gem
+gem install ./adobe-comdox-exl-rake-tasks-0.6.0.gem
 ```
 
 ### Running Tests

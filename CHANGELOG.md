@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0] - 2026-10-29
+
+### Added
+
+- **`render`** - Supports repositories with a `src/pages` layout, copying rendered templates to `src/pages/_includes/templated`
+- **Test suite** - Added render coverage for destination detection, nested helper directories, ignored configuration, repeated renders, and Git/layout failures, plus updated Jekyll integration tests
+
+### Changed
+
+- **Breaking: `render` invocation** - Builds Jekyll from the current working directory instead of resolving `../_jekyll`. Run the task from the intended Jekyll helper directory; generated files remain under `./_site`
+- **Breaking: `render` requirements** - Requires Git and a repository containing either `src/pages` or `help/_includes`. Fails before building if Git is unavailable, the repository root cannot be determined, or neither layout exists
+- **Breaking: `render` destination** - Detects the destination from the Git repository root. Uses `src/pages/_includes/templated` when `src/pages` exists, otherwise `help/_includes/templated`. Repositories containing both layouts now receive templates under `src/pages`
+- **Breaking: include maintenance** - `render` no longer invokes `includes:maintain_all` automatically. Run `bundle exec rake render includes:maintain_all` when both operations are needed
+- **Documentation** - Added upgrade guidance and aligned rendering instructions across the README, setup guide, and task-library reference
+
+### Fixed
+
+- **Local installation** - The `install` Rake task now uses the current gem version instead of a hardcoded `0.1.0` filename
+
 ## [0.5.0] - 2026-07-28
 
 ### Added
