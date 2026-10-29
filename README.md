@@ -118,7 +118,7 @@ apt-get install librsvg2-bin imagemagick
 ### Utility Tasks
 
 ```bash
-# Render templated files
+# Render templated files from the Jekyll helper directory
 bundle exec rake render
 
 # Show task help
@@ -138,6 +138,40 @@ repository/
 └── Rakefile               # Your main Rakefile
 ```
 
+### Render configuration
+
+Run `bundle exec rake render` from the Jekyll helper directory, such as
+`_jekyll/` or `_helper/`. The task always uses the current directory as the
+helper directory; any `helper_dir` setting is ignored.
+
+The task detects the output destination from the Git repository root:
+
+- If `src/pages` exists, use `src/pages/_includes/templated`.
+- Otherwise, if `help/_includes` exists, use `help/_includes/templated`.
+
+If both directories exist, `src/pages` takes precedence. The task fails before
+building if neither directory exists or the Git repository root cannot be
+determined. Git must be installed. Any `templated_dest` setting in `_config.yml`
+is ignored.
+Jekyll builds into `./_site`, and rendered files from `./_site/templated` are
+copied to the detected destination. Both build paths remain relative to the
+current Jekyll helper directory.
+
+### Upgrading from 0.5.0
+
+- Run `render` from the directory containing the Jekyll site, such as `_jekyll/`
+  or `_helper/`, rather than relying on the previous `../_jekyll` resolution.
+- Ensure Git is installed and the helper directory is inside the intended Git
+  repository, with either `src/pages` or `help/_includes` at its root.
+- Check the detected destination. If both layouts exist, rendered templates now
+  go to `src/pages/_includes/templated`, not `help/_includes/templated`.
+- Invoke include maintenance explicitly if your workflow needs it; `render` no
+  longer runs `includes:maintain_all` automatically:
+
+  ```bash
+  bundle exec rake render includes:maintain_all
+  ```
+
 ## Development
 
 ### Building the Gem
@@ -149,7 +183,7 @@ gem build adobe-comdox-exl-rake-tasks.gemspec
 ### Installing Locally
 
 ```bash
-gem install ./adobe-comdox-exl-rake-tasks-0.3.0.gem
+gem install ./adobe-comdox-exl-rake-tasks-0.6.0.gem
 ```
 
 ### Running Tests

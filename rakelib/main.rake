@@ -33,6 +33,7 @@ require 'yaml'
 require 'colorator'
 require 'date'
 require 'tzinfo'
+require 'English'
 
 # NOTE: Individual namespace tasks have been moved to separate files:
 # - includes.rake: Include management tasks
@@ -80,30 +81,51 @@ end
 
 # Utility Tasks
 desc 'Render the templated files.
-  Renders the templated files in the "_jekyll/templates" directory.
-  The result will be found in the "help/_includes/templated" directory.
+  Run from the Jekyll helper directory within a Git repository.
+  Detects the destination from "src/pages" or "help/_includes" at the Git root.
   Requires Jekyll to be installed in the consuming project.'
 task :render do
   RenderTaskHelper.render_templates
-  Rake::Task['includes:maintain_all'].invoke
 end
 
 # Helper module for render task
 module RenderTaskHelper
-  JEKYLL_DIR = '../_jekyll'
-  SITE_DIR = "#{JEKYLL_DIR}/_site".freeze
-  TEMPLATED_SRC = "#{SITE_DIR}/templated".freeze
-  TEMPLATED_DEST = '../help/_includes/templated'
-
   def self.render_templates
     puts 'Rendering templated files...'.magenta
 
+    configure_paths
     verify_jekyll_installed
     run_jekyll_build
     rename_html_to_md
     copy_to_includes
 
     puts 'Templates rendered successfully.'.green
+  end
+
+  def self.configure_paths
+    @helper_dir = Dir.pwd
+    @templated_dest = detected_destination(repository_root)
+    @site_dir = File.join(@helper_dir, '_site')
+    @templated_src = File.join(@site_dir, 'templated')
+  end
+
+  def self.repository_root
+    root = IO.popen(['git', '-C', @helper_dir, 'rev-parse', '--show-toplevel'], err: File::NULL, &:read).strip
+    return root if $CHILD_STATUS.success? && !root.empty?
+
+    raise ArgumentError, "Cannot determine the Git repository root from #{@helper_dir}."
+  rescue Errno::ENOENT
+    raise ArgumentError, 'Git is required to determine the render destination.'
+  end
+
+  def self.detected_destination(root)
+    if File.directory?(File.join(root, 'src/pages'))
+      File.join(root, 'src/pages/_includes/templated')
+    elsif File.directory?(File.join(root, 'help/_includes'))
+      File.join(root, 'help/_includes/templated')
+    else
+      raise ArgumentError, "Cannot determine the render destination: #{root} must contain src/pages or help/_includes."
+    end
   end
 
   def self.verify_jekyll_installed
@@ -114,7 +136,7 @@ module RenderTaskHelper
 
   def self.run_jekyll_build
     puts 'Running Jekyll build...'.blue
-    Dir.chdir(JEKYLL_DIR) do
+    Dir.chdir(@helper_dir) do
       success = system('bundle exec jekyll build --disable-disk-cache')
       abort 'Jekyll build failed.'.red unless success
     end
@@ -122,17 +144,17 @@ module RenderTaskHelper
 
   def self.rename_html_to_md
     puts 'Converting .html files to .md...'.blue
-    Dir.glob("#{SITE_DIR}/**/*.html").each do |html_file|
+    Dir.glob("#{@site_dir}/**/*.html").each do |html_file|
       md_file = html_file.sub(/\.html$/, '.md')
       FileUtils.mv(html_file, md_file)
     end
   end
 
   def self.copy_to_includes
-    return unless Dir.exist?(TEMPLATED_SRC)
+    return unless Dir.exist?(@templated_src)
 
-    puts 'Copying rendered templates to help/_includes/templated/...'.blue
-    FileUtils.mkdir_p(TEMPLATED_DEST)
-    FileUtils.cp_r(Dir.glob("#{TEMPLATED_SRC}/*"), TEMPLATED_DEST)
+    puts "Copying rendered templates to #{@templated_dest}/...".blue
+    FileUtils.mkdir_p(@templated_dest)
+    FileUtils.cp_r(Dir.glob("#{@templated_src}/*"), @templated_dest)
   end
 end
