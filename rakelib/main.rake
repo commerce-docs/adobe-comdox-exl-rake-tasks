@@ -110,12 +110,18 @@ module RenderTaskHelper
   end
 
   def self.repository_root
-    root = IO.popen(['git', '-C', @helper_dir, 'rev-parse', '--show-toplevel'], err: File::NULL, &:read).strip
-    return root if $CHILD_STATUS.success? && !root.empty?
+    root = @helper_dir
+    loop do
+      git_path = File.join(root, '.git')
+      return root if File.directory?(git_path) || File.file?(git_path)
+
+      parent = File.dirname(root)
+      break if parent == root
+
+      root = parent
+    end
 
     raise ArgumentError, "Cannot determine the Git repository root from #{@helper_dir}."
-  rescue Errno::ENOENT
-    raise ArgumentError, 'Git is required to determine the render destination.'
   end
 
   def self.detected_destination(root)

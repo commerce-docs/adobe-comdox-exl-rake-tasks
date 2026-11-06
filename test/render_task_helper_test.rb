@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require_relative 'integration_test_helper'
+require 'tmpdir'
 
 class RenderTaskHelperTest < Minitest::Test
   include IntegrationTestHelper
@@ -125,23 +126,46 @@ class RenderTaskHelperTest < Minitest::Test
   end
 
   def test_git_root_failure_has_a_clear_error
-    IO.stub(:popen, ->(*) { '' }) do
+    Dir.mktmpdir('render-without-git') do |directory|
       error = assert_raises(ArgumentError) do
-        Dir.chdir(TEMP_DIR) { RenderTaskHelper.configure_paths }
+        Dir.chdir(directory) { RenderTaskHelper.configure_paths }
       end
 
       assert_includes error.message, 'Cannot determine the Git repository root'
     end
   end
 
-  def test_missing_git_has_a_clear_error
-    IO.stub(:popen, ->(*) { raise Errno::ENOENT, 'git' }) do
-      error = assert_raises(ArgumentError) do
-        Dir.chdir(TEMP_DIR) { RenderTaskHelper.configure_paths }
-      end
+  def test_render_from_checkout_owned_by_another_user
+    previous_value = ENV.fetch('GIT_TEST_ASSUME_DIFFERENT_OWNER', nil)
+    ENV['GIT_TEST_ASSUME_DIFFERENT_OWNER'] = '1'
+    create_rendered_template('_jekyll')
 
-      assert_includes error.message, 'Git is required'
+    render_from('_jekyll')
+
+    assert_equal 'Rendered content', read_test_file('help/_includes/templated/example.md')
+  ensure
+    ENV['GIT_TEST_ASSUME_DIFFERENT_OWNER'] = previous_value
+  end
+
+  def test_render_does_not_require_git_executable
+    create_rendered_template('_jekyll')
+
+    IO.stub(:popen, ->(*) { raise Errno::ENOENT, 'git' }) do
+      render_from('_jekyll')
     end
+
+    assert file_exists?('help/_includes/templated/example.md')
+  end
+
+  def test_worktree_file_marks_repository_root
+    create_test_file('worktree/.git', "gitdir: ../.git/worktrees/example\n")
+    FileUtils.mkdir_p(File.join(TEMP_DIR, 'worktree/help/_includes'))
+    create_rendered_template('worktree/_jekyll')
+
+    render_from('worktree/_jekyll')
+
+    assert file_exists?('worktree/help/_includes/templated/example.md')
+    refute file_exists?('help/_includes/templated/example.md')
   end
 
   private
