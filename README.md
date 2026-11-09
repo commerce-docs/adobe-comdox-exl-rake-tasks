@@ -151,8 +151,9 @@ The task detects the output destination from the Git repository root:
 
 If both directories exist, `src/pages` takes precedence. The task fails before
 building if neither directory exists or the Git repository root cannot be
-determined. Git must be installed. Any `templated_dest` setting in `_config.yml`
-is ignored.
+determined. The root is the nearest ancestor (including the current directory)
+containing a `.git` file or directory; rendering does not require the Git
+executable. Any `templated_dest` setting in `_config.yml` is ignored.
 Jekyll builds into `./_site`, and rendered files from `./_site/templated` are
 copied to the detected destination. Both build paths remain relative to the
 current Jekyll helper directory.
@@ -161,8 +162,9 @@ current Jekyll helper directory.
 
 - Run `render` from the directory containing the Jekyll site, such as `_jekyll/`
   or `_helper/`, rather than relying on the previous `../_jekyll` resolution.
-- Ensure Git is installed and the helper directory is inside the intended Git
-  repository, with either `src/pages` or `help/_includes` at its root.
+- Ensure the helper directory is inside the intended Git repository, with either
+  `src/pages` or `help/_includes` at its root. Rendering does not require the Git
+  executable as of 0.6.1.
 - Check the detected destination. If both layouts exist, rendered templates now
   go to `src/pages/_includes/templated`, not `help/_includes/templated`.
 - Invoke include maintenance explicitly if your workflow needs it; `render` no
@@ -183,7 +185,7 @@ gem build adobe-comdox-exl-rake-tasks.gemspec
 ### Installing Locally
 
 ```bash
-gem install ./adobe-comdox-exl-rake-tasks-0.6.0.gem
+gem install ./adobe-comdox-exl-rake-tasks-0.6.1.gem
 ```
 
 ### Running Tests
