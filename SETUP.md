@@ -79,9 +79,10 @@ your-repo/
 - `bundle exec rake render` - Render templated files from the current Jekyll helper directory
 - `bundle exec rake -T` - Show available tasks with descriptions
 
-Rendering requires Git and either `src/pages` or `help/_includes` at the Git
-repository root. If both exist, `src/pages` takes precedence. The task no longer
-runs include maintenance automatically; use
+Rendering requires either `src/pages` or `help/_includes` at the Git repository
+root, identified by the nearest `.git` file or directory. The Git executable is
+not required for rendering. If both layouts exist, `src/pages` takes precedence.
+The task no longer runs include maintenance automatically; use
 `bundle exec rake render includes:maintain_all` when needed. See
 [Render configuration](README.md#render-configuration) and
 [Upgrading from 0.5.0](README.md#upgrading-from-050) for details.

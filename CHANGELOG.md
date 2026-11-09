@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.1] - 2026-11-09
+
+### Fixed
+
+- **`render`** - Fixed repository-root detection for checkouts owned by another user, so rendering no longer fails because of Git ownership checks
+- **`render`** - Removed the Git executable requirement for rendering; repository-root detection uses the nearest `.git` file or directory, including worktree markers
+
 ## [0.6.0] - 2026-10-29
 
 ### Added
